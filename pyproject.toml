@@ -33,6 +33,9 @@ dev = [
     "pytest>=7.0.0",
 ]
 
+[tool.setuptools.package-data]
+lab_math_tools = ["py.typed"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

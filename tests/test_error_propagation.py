@@ -156,3 +156,14 @@ def test_relative_uncertainty_zero_division():
 
     with pytest.raises(ZeroDivisionError):
         relative_uncertainty_saap(s_f, av_vals, av_errs)
+
+
+def test_error_propagation_invalid_h():
+    """Test that non-positive step size h raises ValueError across error propagation routines."""
+    def f(x): return x**2
+    with pytest.raises(ValueError, match="Step size h must be strictly positive."):
+        propagate_uncertainty_saap(f, x=2.0, dx=0.1, h=0.0)
+    with pytest.raises(ValueError, match="Step size h must be strictly positive."):
+        propagate_covariance_saap(lambda v: v, np.array([1.0]), np.array([[0.1]]), h=-1e-4)
+    with pytest.raises(ValueError, match="Step size h must be strictly positive."):
+        error_contribution_saap(lambda v: v[0], np.array([1.0]), np.array([0.1]), h=0.0)

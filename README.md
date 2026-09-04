@@ -17,6 +17,9 @@ A lightweight, robust Python library for numerical calculus and experimental err
   - Multi-output covariance matrix propagation via Jacobian transformation ($\mathbf{\Sigma}_y = \mathbf{J} \mathbf{\Sigma}_x \mathbf{J}^T$).
   - Variance budget decomposition calculating the fractional contribution of each variable to total variance.
   - Relative / fractional uncertainty calculations.
+- **Modern Python Standards**:
+  - Full typing annotations with PEP 561 (`py.typed`) support for Pyright/MyPy.
+  - Cross-platform automated CI running on Python 3.9–3.12.
 
 ---
 

@@ -57,6 +57,9 @@ def propagate_uncertainty_saap(
     Absolute (Worst-Case == Sum-Absolute):
         Δf = Σ | (∂f/∂x_i) * Δx_i |
     """
+    if h <= 0:
+        raise ValueError("Step size h must be strictly positive.")
+
     # 1. Handle pure scalar mapping (R -> R)
     if np.isscalar(x) and np.isscalar(dx):
         sensitivity = derivative_saap(f, float(x), h)
@@ -109,6 +112,9 @@ def propagate_covariance_saap(
     Mathematical Formulation:
     V_y = J * V_x * J.T
     """
+    if h <= 0:
+        raise ValueError("Step size h must be strictly positive.")
+
     av_x_arr = np.asarray(av_x, dtype=float)
     am_vx_arr = np.asarray(am_vx, dtype=float)
     n = len(av_x_arr)
@@ -143,6 +149,9 @@ def error_contribution_saap(
     Mathematical Formulation:
     * Weight_i = ((∂f/∂x_i) * Δx_i)^2 / (Δf)^2
     """
+    if h <= 0:
+        raise ValueError("Step size h must be strictly positive.")
+
     av_x_arr = np.asarray(av_x, dtype=float)
     av_dx_arr = np.asarray(av_dx, dtype=float)
 

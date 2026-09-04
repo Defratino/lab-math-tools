@@ -30,6 +30,8 @@ def derivative_saap(
     Calculates the derivative of a function at a given point using the saap method.
     Works for both scalar-valued (R -> R) and vector-valued (R -> R^n) functions.
     """
+    if h <= 0:
+        raise ValueError("Step size h must be strictly positive.")
     return (f(x + h) - f(x - h)) / (2 * h)
 
 
@@ -43,6 +45,9 @@ def partial_derivative_saap(
     Calculates the partial derivative of a function with respect to the idx-th variable.
     Works for both scalar-valued (R^n -> R) and vector-valued (R^n -> R^m) functions.
     """
+    if h <= 0:
+        raise ValueError("Step size h must be strictly positive.")
+
     av_x_arr = np.asarray(av_x, dtype=float)
     if idx < 0 or idx >= len(av_x_arr):
         raise IndexError("The index is out of bounds.")

@@ -108,3 +108,14 @@ def test_divergence_saap_dimension_mismatch():
     # Divergence requires R^n -> R^n. Passing R^2 -> R^3 should fail.
     with pytest.raises(ValueError, match="The function must return a vector of the same dimension as the input."):
         divergence_saap(v3_f, v2_x)
+
+
+def test_derivative_saap_invalid_h():
+    """Test that non-positive step size h raises ValueError."""
+    def f(x: float) -> float: return x**2
+    with pytest.raises(ValueError, match="Step size h must be strictly positive."):
+        derivative_saap(f, x=2.0, h=0.0)
+    with pytest.raises(ValueError, match="Step size h must be strictly positive."):
+        derivative_saap(f, x=2.0, h=-1e-3)
+    with pytest.raises(ValueError, match="Step size h must be strictly positive."):
+        partial_derivative_saap(f, np.array([2.0]), idx=0, h=0.0)
