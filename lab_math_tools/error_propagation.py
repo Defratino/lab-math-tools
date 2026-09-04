@@ -1,5 +1,5 @@
 import numpy as np
-from lab_math_tools.derivatives import av_gradient_saap, derivative_saap
+from lab_math_tools.derivatives import av_gradient_saap, derivative_saap, am_jacobian_saap
 
 def propagate_uncertainty_saap(f, x: float | np.ndarray, dx: float | np.ndarray, method: str = "statistical", h: float = 1e-5) -> float:
     """
@@ -46,3 +46,82 @@ def propagate_uncertainty_saap(f, x: float | np.ndarray, dx: float | np.ndarray,
         return float(np.sum(np.abs(av_terms)))
     else:
         raise ValueError("Method must be 'statistical' or 'absolute'.")
+
+def propagate_covariance_saap(av_f, av_x: np.ndarray, am_vx: np.ndarray, h: float = 1e-5) -> np.ndarray:
+    """
+    Propagates a covariance matrix through a vector-valued function (R^n -> R^m).
+    
+    Parameters:
+    * av_f (callable): The vector-valued objective function.
+    * av_x (np.ndarray): The nominal values of the independent variables (length n).
+    * am_vx (np.ndarray): The (n, n) covariance matrix of the inputs.
+    * h (float): The step size for the numerical derivative approximation.
+    
+    Returns:
+    * np.ndarray: The (m, m) output covariance matrix (am_vy).
+    
+    Mathematical Formulation:
+    V_y = J * V_x * J.T
+    """
+    assert am_vx.shape == (len(av_x), len(av_x)), "Input covariance matrix must be square with dimensions matching av_x."
+    
+    am_j = am_jacobian_saap(av_f, av_x, h)
+    
+    # Compute J * Vx * J^T
+    am_vy = am_j @ am_vx @ am_j.T
+    return am_vy
+
+def error_contribution_saap(s_f, av_x: np.ndarray, av_dx: np.ndarray, h: float = 1e-5) -> np.ndarray:
+    """
+    Calculates the fractional contribution of each input variable to the total 
+    statistical variance of a scalar function (R^n -> R).
+    
+    Parameters:
+    * s_f (callable): The scalar-valued objective function.
+    * av_x (np.ndarray): The nominal values of the independent variables.
+    * av_dx (np.ndarray): The absolute uncertainties (errors) associated with av_x.
+    * h (float): The step size for the numerical derivative approximation.
+    
+    Returns:
+    * np.ndarray: An array of fractional weights summing to 1.0.
+    
+    Mathematical Formulation:
+    * Weight_i = (f'(x)*dx)^2 / (df)^2
+    """
+    assert len(av_x) == len(av_dx), "Value and uncertainty vectors must have the same dimension."
+    
+    av_sensitivities = av_gradient_saap(s_f, av_x, h)
+    av_variance_terms = (av_sensitivities * av_dx)**2
+    
+    total_variance = np.sum(av_variance_terms)
+    
+    # Avoid division by zero if the total variance is entirely zero
+    if total_variance == 0:
+        return np.zeros_like(av_variance_terms)
+        
+    return av_variance_terms / total_variance
+
+def relative_uncertainty_saap(f, x: float | np.ndarray, dx: float | np.ndarray, method: str = "statistical", h: float = 1e-5) -> float:
+    """
+    Calculates the relative (fractional) uncertainty of a function.
+    
+    Parameters:
+    * f (callable): The objective function.
+    * x (float | np.ndarray): The nominal values of the independent variables.
+    * dx (float | np.ndarray): The absolute uncertainties of the input variables.
+    * method (str): "statistical" or "absolute" combination rule.
+    * h (float): The step size for the numerical derivative approximation.
+    
+    Returns:
+    * float: The dimensionless relative uncertainty.
+    
+    Mathematical Formulation:
+    * Relative Error = |df/f(x)|
+    """
+    absolute_uncertainty = propagate_uncertainty_saap(f, x, dx, method, h)
+    nominal_value = float(np.abs(f(x)))
+    
+    if nominal_value == 0:
+        raise ZeroDivisionError("Nominal function value is zero; relative uncertainty is undefined.")
+        
+    return absolute_uncertainty / nominal_value
