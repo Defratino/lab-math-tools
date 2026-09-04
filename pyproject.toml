@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "lab-math-tools"
+name = "lab_math_tools"
 version = "0.1.0"
 description = "A lightweight numerical calculus and experimental error analysis library for lab mathematics."
 readme = "README.md"
