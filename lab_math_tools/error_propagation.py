@@ -22,7 +22,7 @@ def propagate_uncertainty_saap(f, x: float | np.ndarray, dx: float | np.ndarray,
     * h (float): The step size for the numerical derivative approximation.
 
     Returns:
-    * float: The total propagated uncertainty (\Delta f).
+    * float: The total propagated uncertainty (Δf).
 
     Mathematical Formulation:
     Statistical (Root-Sum-Square):
@@ -86,7 +86,7 @@ def error_contribution_saap(s_f, av_x: np.ndarray, av_dx: np.ndarray, h: float =
     * np.ndarray: An array of fractional weights summing to 1.0.
     
     Mathematical Formulation:
-    * Weight_i = (f'(x)*dx)^2 / (df)^2
+    * Weight_i = ((∂f/∂x_i) * Δx_i)^2 / (Δf)^2
     """
     assert len(av_x) == len(av_dx), "Value and uncertainty vectors must have the same dimension."
     
@@ -116,7 +116,7 @@ def relative_uncertainty_saap(f, x: float | np.ndarray, dx: float | np.ndarray, 
     * float: The dimensionless relative uncertainty.
     
     Mathematical Formulation:
-    * Relative Error = |df/f(x)|
+    * Relative Error = |Δf / f(x)|
     """
     absolute_uncertainty = propagate_uncertainty_saap(f, x, dx, method, h)
     nominal_value = float(np.abs(f(x)))
