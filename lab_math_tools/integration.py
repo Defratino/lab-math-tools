@@ -1,3 +1,19 @@
+"""
+Calculus Integration Module
+
+This module provides numerical integration tools for scalar and vector-valued 
+functions using the Trapezoidal rule and Monte Carlo integration. Functions are 
+designed to handle multidimensional mappings (R -> R, R -> R^n, R^n -> R, R^n -> R^m) 
+seamlessly through numpy broadcasting.
+
+Conventions followed:
+- `av_` : Abstract vector (numpy.ndarray with dynamic dimensions)
+- `am_` : Abstract matrix (numpy.ndarray with dynamic dimensions)
+- `s_f` : Scalar-valued function
+- `av_f`: Vector-valued function
+- `f`   : Generic function (can output scalar or vector)
+"""
+
 import numpy as np
 from lab_math_tools.derivatives import derivative_saap, partial_derivative_saap
 

@@ -1,5 +1,5 @@
 """
-Calculus Simple Approximation At Point (saap) Module
+Calculus Simple Approximation At Point (saap) Derivative Module
 
 This module provides numerical differentiation tools for scalar and vector-valued 
 functions using the Simple Approximation At Point (saap) method. Functions are 
