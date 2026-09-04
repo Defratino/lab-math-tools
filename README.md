@@ -25,7 +25,19 @@ A lightweight, robust Python library for numerical calculus and experimental err
 
 ## Installation
 
-Clone the repository and install in editable mode:
+### Directly from GitHub (No cloning needed)
+
+```bash
+pip install git+https://github.com/Defratino/lab-math-tools.git
+```
+
+To install from a specific branch (e.g. `main` or `dev`):
+
+```bash
+pip install git+https://github.com/Defratino/lab-math-tools.git@main
+```
+
+### Local / Editable Development Installation
 
 ```bash
 git clone https://github.com/Defratino/lab-math-tools.git
