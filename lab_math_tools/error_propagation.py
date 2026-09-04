@@ -1,3 +1,19 @@
+"""
+Statistical Error Propagation Module
+
+This module provides tools for error propagation and statistical analysis of
+functions using the Simple Approximation At Point (saap) method. Functions are 
+designed to handle multidimensional mappings (R -> R, R -> R^n, R^n -> R, R^n -> R^m) 
+seamlessly through numpy broadcasting.
+
+Conventions followed:
+- `av_` : Abstract vector (numpy.ndarray with dynamic dimensions)
+- `am_` : Abstract matrix (numpy.ndarray with dynamic dimensions)
+- `s_f` : Scalar-valued function
+- `av_f`: Vector-valued function
+- `f`   : Generic function (can output scalar or vector)
+"""
+
 import numpy as np
 from lab_math_tools.derivatives import av_gradient_saap, derivative_saap, am_jacobian_saap
 
