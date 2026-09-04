@@ -1,0 +1,23 @@
+General Writing Conventions
+    1. All multidimensional variables are defined as numpy.ndarray.
+        a. Vectors: Prefixed with v{n}_, where n is the dimension (e.g., v3_velocity).
+        b. Matrices: Prefixed with m{n}{l}_, where n and l are the dimensions (e.g., m33_rotation).
+        c. Abstract/Dynamic Dimensions: If dimensions are not pre-defined or accept a range,
+            use av_ (abstract vector) or am_ (abstract matrix).
+
+Custom Function Conventions
+    Function names indicate their mathematical mapping domains:
+    1. Single Input -> Single Output (R -> R): Standard naming, f(x)
+    2. Single Input -> Vector Output (R -> R^n): Prefixed with output dimension, v{n}_f(x)
+    3. Vector Input -> Single Output (R^n -> R): Argument prefixed with input dimension, f(v{n}_x)
+    4. Vector Input -> Vector Output (R^n -> R^m): 
+        Prefixed with output dimension and argument prefixed with input dimension, v{m}_f(v{n}_x)
+
+    (Note: If dimensions are abstract, av_ replaces the {n} or {m} prefix).
+
+Functions as Inputs (Callbacks)
+    1. For predefined scripts requiring functional arguments,
+        the argument names will strictly follow the mapping signatures above (e.g., def optimize(f, v3_x):).
+
+    2. For scripts accepting multiple function inputs of the same type,
+        they will be numbered: f1, f2, f3, etc.
