@@ -31,6 +31,9 @@ dependencies = [
 dev = [
     "pytest>=7.0.0",
 ]
+viz = [
+    "matplotlib>=3.5.0",
+]
 
 [tool.setuptools.package-data]
 lab_math_tools = ["py.typed"]

@@ -21,6 +21,10 @@ from lab_math_tools.integration import (
     integral_over_shape,
     integral_trapezoidal,
 )
+from lab_math_tools.visualization import (
+    plot_shape_2d,
+    plot_shape_3d,
+)
 
 __version__ = "0.1.0"
 
@@ -39,4 +43,7 @@ __all__ = [
     "propagate_covariance_saap",
     "error_contribution_saap",
     "relative_uncertainty_saap",
+    # Visualization
+    "plot_shape_2d",
+    "plot_shape_3d",
 ]

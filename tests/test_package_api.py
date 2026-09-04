@@ -14,6 +14,8 @@ def test_package_exports():
         "propagate_covariance_saap",
         "error_contribution_saap",
         "relative_uncertainty_saap",
+        "plot_shape_2d",
+        "plot_shape_3d",
     ]
 
     for export_name in expected_exports:

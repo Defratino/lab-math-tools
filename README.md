@@ -17,6 +17,9 @@ A lightweight, robust Python library for numerical calculus and experimental err
   - Multi-output covariance matrix propagation via Jacobian transformation ($\mathbf{\Sigma}_y = \mathbf{J} \mathbf{\Sigma}_x \mathbf{J}^T$).
   - Variance budget decomposition calculating the fractional contribution of each variable to total variance.
   - Relative / fractional uncertainty calculations.
+- **Geometric Shape Visualization**:
+  - 2D contour & region plotting with bounding box guides.
+  - 3D volumetric visualization via voxel grids (`method="voxels"`) or Monte Carlo point clouds (`method="scatter"`).
 - **Modern Python Standards**:
   - Full typing annotations with PEP 561 (`py.typed`) support for Pyright/MyPy.
   - Cross-platform automated CI running on Python 3.10–3.12.
@@ -31,6 +34,12 @@ A lightweight, robust Python library for numerical calculus and experimental err
 pip install git+https://github.com/Defratino/lab-math-tools.git
 ```
 
+To include visualization support (Matplotlib):
+
+```bash
+pip install "lab_math_tools[viz] @ git+https://github.com/Defratino/lab-math-tools.git"
+```
+
 To install from a specific branch (e.g. `main` or `dev`):
 
 ```bash
@@ -42,7 +51,7 @@ pip install git+https://github.com/Defratino/lab-math-tools.git@main
 ```bash
 git clone https://github.com/Defratino/lab-math-tools.git
 cd lab-math-tools
-pip install -e .
+pip install -e .[dev,viz]
 ```
 
 To run the test suite:
@@ -108,9 +117,27 @@ delta_f = lmt.propagate_uncertainty_saap(lambda v: v[0] * v[1], vals, errs, meth
 # Fractional variance contribution of each input
 weights = lmt.error_contribution_saap(lambda v: v[0] * v[1], vals, errs)
 
-# Covariance matrix propagation: Vy = J * Vx * J^T
+# Covariance matrix propagation: Vy = J * Vx * J.T
 vx = np.diag([0.1, 0.2])
 vy = lmt.propagate_covariance_saap(lambda v: np.array([v[0] + v[1], v[0] * v[1]]), vals, vx)
+```
+
+### 5. Shape Visualization (2D & 3D)
+
+```python
+# 2D Unit Circle
+bounds_2d = np.array([[-1.5, 1.5], [-1.5, 1.5]])
+circle = lambda v: float(v[0]**2 + v[1]**2 <= 1.0)
+lmt.plot_shape_2d(circle, bounds_2d, title="Unit Circle (2D)")
+
+# 3D Unit Sphere (Voxel Grid)
+bounds_3d = np.array([[-1.2, 1.2], [-1.2, 1.2], [-1.2, 1.2]])
+sphere = lambda v: bool(v[0]**2 + v[1]**2 + v[2]**2 <= 1.0)
+lmt.plot_shape_3d(sphere, bounds_3d, method="voxels", title="Unit Sphere (Voxels)")
+
+# 3D Cylinder (Monte Carlo Point Cloud)
+cylinder = lambda v: bool(v[0]**2 + v[1]**2 <= 1.0 and -1.0 <= v[2] <= 1.0)
+lmt.plot_shape_3d(cylinder, bounds_3d, method="scatter", n_samples=25000, title="Cylinder Cloud")
 ```
 
 ---
