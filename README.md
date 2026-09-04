@@ -19,7 +19,7 @@ A lightweight, robust Python library for numerical calculus and experimental err
   - Relative / fractional uncertainty calculations.
 - **Modern Python Standards**:
   - Full typing annotations with PEP 561 (`py.typed`) support for Pyright/MyPy.
-  - Cross-platform automated CI running on Python 3.9–3.12.
+  - Cross-platform automated CI running on Python 3.10–3.12.
 
 ---
 
