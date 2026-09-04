@@ -14,10 +14,21 @@ Conventions followed:
 - `f`   : Generic function (can output scalar or vector)
 """
 
-import numpy as np
-from lab_math_tools.derivatives import av_gradient_saap, derivative_saap, am_jacobian_saap
+from __future__ import annotations
 
-def propagate_uncertainty_saap(f, x: float | np.ndarray, dx: float | np.ndarray, method: str = "statistical", h: float = 1e-5) -> float:
+from typing import Callable
+
+import numpy as np
+from lab_math_tools.derivatives import am_jacobian_saap, av_gradient_saap, derivative_saap
+
+
+def propagate_uncertainty_saap(
+    f: Callable[..., float],
+    x: float | np.ndarray,
+    dx: float | np.ndarray,
+    method: str = "statistical",
+    h: float = 1e-5,
+) -> float:
     """
     Calculates the propagated uncertainty of a function using numerical 
     derivative approximations (SAAP).
@@ -29,9 +40,9 @@ def propagate_uncertainty_saap(f, x: float | np.ndarray, dx: float | np.ndarray,
     their respective uncertainties to find the total combined error.
 
     Parameters:
-    * s_f (callable): The scalar-valued objective function.
-    * av_x (np.ndarray): The nominal values of the independent variables.
-    * av_dx (np.ndarray): The absolute uncertainties (errors) associated with each variable in av_x.
+    * f (callable): The scalar-valued objective function.
+    * x (float | np.ndarray): The nominal values of the independent variables.
+    * dx (float | np.ndarray): The absolute uncertainties (errors) associated with each variable in x.
     * method (str): The combination rule for the errors.
         - "statistical": (Default) Assumes errors are independent and random, combining them via Root-Sum-Square (RSS).
         - "absolute": Assumes a worst-case scenario where all errors stack in the same direction.
@@ -42,20 +53,33 @@ def propagate_uncertainty_saap(f, x: float | np.ndarray, dx: float | np.ndarray,
 
     Mathematical Formulation:
     Statistical (Root-Sum-Square):
+        Δf = sqrt( Σ ( (∂f/∂x_i) * Δx_i )^2 )
     Absolute (Worst-Case == Sum-Absolute):
+        Δf = Σ | (∂f/∂x_i) * Δx_i |
     """
-
     # 1. Handle pure scalar mapping (R -> R)
     if np.isscalar(x) and np.isscalar(dx):
-        sensitivity = derivative_saap(f, x, h)
+        sensitivity = derivative_saap(f, float(x), h)
         return float(np.abs(sensitivity * dx))
-        
+
+    # Guard against scalar-vector mismatch
+    if np.isscalar(x) != np.isscalar(dx):
+        raise ValueError("x and dx must both be scalars or both be vectors with the same dimension.")
+
     # 2. Handle vector mapping (R^n -> R)
-    assert len(x) == len(dx), "Value and uncertainty vectors must have the same dimension."
-    
-    av_sensitivities = av_gradient_saap(f, x, h)
-    av_terms = av_sensitivities * dx
-    
+    x_arr = np.asarray(x, dtype=float)
+    dx_arr = np.asarray(dx, dtype=float)
+
+    if x_arr.ndim == 0 and dx_arr.ndim == 0:
+        sensitivity = derivative_saap(f, float(x_arr), h)
+        return float(np.abs(sensitivity * dx_arr))
+
+    if x_arr.shape != dx_arr.shape:
+        raise ValueError("Value and uncertainty vectors must have the same dimension.")
+
+    av_sensitivities = av_gradient_saap(f, x_arr, h)
+    av_terms = av_sensitivities * dx_arr
+
     if method == "statistical":
         return float(np.sqrt(np.sum(av_terms**2)))
     elif method == "absolute":
@@ -63,7 +87,13 @@ def propagate_uncertainty_saap(f, x: float | np.ndarray, dx: float | np.ndarray,
     else:
         raise ValueError("Method must be 'statistical' or 'absolute'.")
 
-def propagate_covariance_saap(av_f, av_x: np.ndarray, am_vx: np.ndarray, h: float = 1e-5) -> np.ndarray:
+
+def propagate_covariance_saap(
+    av_f: Callable[[np.ndarray], np.ndarray],
+    av_x: np.ndarray,
+    am_vx: np.ndarray,
+    h: float = 1e-5,
+) -> np.ndarray:
     """
     Propagates a covariance matrix through a vector-valued function (R^n -> R^m).
     
@@ -79,15 +109,24 @@ def propagate_covariance_saap(av_f, av_x: np.ndarray, am_vx: np.ndarray, h: floa
     Mathematical Formulation:
     V_y = J * V_x * J.T
     """
-    assert am_vx.shape == (len(av_x), len(av_x)), "Input covariance matrix must be square with dimensions matching av_x."
-    
-    am_j = am_jacobian_saap(av_f, av_x, h)
-    
-    # Compute J * Vx * J^T
-    am_vy = am_j @ am_vx @ am_j.T
+    av_x_arr = np.asarray(av_x, dtype=float)
+    am_vx_arr = np.asarray(am_vx, dtype=float)
+    n = len(av_x_arr)
+
+    if am_vx_arr.shape != (n, n):
+        raise ValueError("Input covariance matrix must be square with dimensions matching av_x.")
+
+    am_j = am_jacobian_saap(av_f, av_x_arr, h)
+    am_vy = am_j @ am_vx_arr @ am_j.T
     return am_vy
 
-def error_contribution_saap(s_f, av_x: np.ndarray, av_dx: np.ndarray, h: float = 1e-5) -> np.ndarray:
+
+def error_contribution_saap(
+    s_f: Callable[[np.ndarray], float],
+    av_x: np.ndarray,
+    av_dx: np.ndarray,
+    h: float = 1e-5,
+) -> np.ndarray:
     """
     Calculates the fractional contribution of each input variable to the total 
     statistical variance of a scalar function (R^n -> R).
@@ -104,20 +143,31 @@ def error_contribution_saap(s_f, av_x: np.ndarray, av_dx: np.ndarray, h: float =
     Mathematical Formulation:
     * Weight_i = ((∂f/∂x_i) * Δx_i)^2 / (Δf)^2
     """
-    assert len(av_x) == len(av_dx), "Value and uncertainty vectors must have the same dimension."
-    
-    av_sensitivities = av_gradient_saap(s_f, av_x, h)
-    av_variance_terms = (av_sensitivities * av_dx)**2
-    
+    av_x_arr = np.asarray(av_x, dtype=float)
+    av_dx_arr = np.asarray(av_dx, dtype=float)
+
+    if av_x_arr.shape != av_dx_arr.shape:
+        raise ValueError("Value and uncertainty vectors must have the same dimension.")
+
+    av_sensitivities = av_gradient_saap(s_f, av_x_arr, h)
+    av_variance_terms = (av_sensitivities * av_dx_arr) ** 2
+
     total_variance = np.sum(av_variance_terms)
-    
+
     # Avoid division by zero if the total variance is entirely zero
     if total_variance == 0:
         return np.zeros_like(av_variance_terms)
-        
+
     return av_variance_terms / total_variance
 
-def relative_uncertainty_saap(f, x: float | np.ndarray, dx: float | np.ndarray, method: str = "statistical", h: float = 1e-5) -> float:
+
+def relative_uncertainty_saap(
+    f: Callable[..., float],
+    x: float | np.ndarray,
+    dx: float | np.ndarray,
+    method: str = "statistical",
+    h: float = 1e-5,
+) -> float:
     """
     Calculates the relative (fractional) uncertainty of a function.
     
@@ -136,8 +186,8 @@ def relative_uncertainty_saap(f, x: float | np.ndarray, dx: float | np.ndarray, 
     """
     absolute_uncertainty = propagate_uncertainty_saap(f, x, dx, method, h)
     nominal_value = float(np.abs(f(x)))
-    
+
     if nominal_value == 0:
         raise ZeroDivisionError("Nominal function value is zero; relative uncertainty is undefined.")
-        
+
     return absolute_uncertainty / nominal_value
