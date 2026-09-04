@@ -21,7 +21,7 @@ def derivative_saap(f, x: float, h: float = 1e-5) -> float | np.ndarray:
     Calculates the derivative of a function at a given point using the saap method.
     Works for both scalar-valued (R -> R) and vector-valued (R -> R^n) functions.
     """
-    return (f(x + h) - f(x)) / h
+    return (f(x + h) - f(x-h)) / (2*h)
 
 def partial_derivative_saap(f, av_x: np.ndarray, idx: int = 0, h: float = 1e-5) -> float | np.ndarray:
     """
@@ -32,8 +32,10 @@ def partial_derivative_saap(f, av_x: np.ndarray, idx: int = 0, h: float = 1e-5) 
 
     av_x_plus_h = np.array(av_x, dtype=float) 
     av_x_plus_h[idx] += h
+    av_x_minus_h = np.array(av_x, dtype=float) 
+    av_x_minus_h[idx] -= h
 
-    return (f(av_x_plus_h) - f(av_x)) / h
+    return (f(av_x_plus_h) - f(av_x_minus_h)) / (2*h)
 
 def av_gradient_saap(s_f, av_x: np.ndarray, h: float = 1e-5) -> np.ndarray:
     """
