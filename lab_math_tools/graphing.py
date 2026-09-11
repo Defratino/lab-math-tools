@@ -35,12 +35,14 @@ def plot_measurements(
     colors: str | list[str] | None = None,
     color_method: str = "gradient",
     save_file_name: str = "",
+    ax: plt.Axes | None = None,
+    show: bool = True,
     *,
     m_x: Any = None,
     m_y: Any = None,
     v_x: Any = None,
     v_y: Any = None,
-) -> None:
+) -> plt.Axes:
     """
     Plot multiple measurements on a 2D graph.
 
@@ -66,6 +68,11 @@ def plot_measurements(
         - "specific": Specific colors supplied for each measurement in `colors`.
         - "colormap": Colors sampled from a Matplotlib colormap name passed in `colors`.
     * save_file_name (str): If provided, saves the figure to this file path.
+    * ax (plt.Axes | None): Matplotlib Axes object to plot on. If None, creates a new figure and axes.
+    * show (bool): Whether to call plt.show() at the end. Default is True.
+
+    Returns:
+    * plt.Axes: The Matplotlib Axes object containing the plot.
 
     Backward Compatibility Keyword Arguments:
     * m_x, m_y: Aliases for 2D matrix or vector inputs.
@@ -88,12 +95,16 @@ def plot_measurements(
         else:
             raise ValueError("y-data must be provided via lv_y (or m_y / v_y).")
 
+    # Create figure and axes if not provided
+    if ax is None:
+        _, ax = plt.subplots()
+
     # Normalize inputs to paired lists of 1D numpy arrays
     lv_x_norm, lv_y_norm = _normalize_xy(lv_x, lv_y)
     n_measurements = len(lv_y_norm)
 
     if n_measurements == 0:
-        return
+        return ax
 
     # Normalize linestyles
     if linestyles is None:
@@ -138,7 +149,7 @@ def plot_measurements(
     # Plotting loop
     for i in range(n_measurements):
         label = line_labels[i] if line_labels is not None else None
-        plt.plot(
+        ax.plot(
             lv_x_norm[i],
             lv_y_norm[i],
             linestyle=linestyles[i],
@@ -147,18 +158,21 @@ def plot_measurements(
             label=label,
         )
 
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
     if title:
-        plt.title(title)
+        ax.set_title(title)
     if line_labels is not None:
-        plt.legend()
+        ax.legend()
     if grid:
-        plt.grid(True)
+        ax.grid(True)
     if save_file_name:
-        plt.savefig(save_file_name)
+        ax.figure.savefig(save_file_name)
 
-    plt.show()
+    if show:
+        plt.show()
+
+    return ax
 
 
 def _normalize_xy(

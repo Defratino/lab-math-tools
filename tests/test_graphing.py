@@ -266,3 +266,67 @@ def test_turn_list_of_vectors_to_matrix():
     # Empty list
     m_empty = turn_list_of_vectors_to_matrix([])
     assert m_empty.shape == (0, 0)
+
+
+def test_plot_measurements_returns_axes():
+    """
+    Test that plot_measurements returns a valid plt.Axes instance with the plotted line(s).
+    """
+    lv_x = np.array([1.0, 2.0, 3.0])
+    lv_y = np.array([4.0, 5.0, 6.0])
+
+    ax = plot_measurements(lv_x, lv_y)
+
+    assert isinstance(ax, plt.Axes)
+    assert len(ax.lines) == 1
+
+
+def test_plot_measurements_custom_ax():
+    """
+    Test that plot_measurements plots onto a user-supplied Axes object rather than creating a new one.
+    """
+    fig, custom_ax = plt.subplots()
+    lv_x = np.array([1.0, 2.0])
+    lv_y = np.array([3.0, 4.0])
+
+    returned_ax = plot_measurements(lv_x, lv_y, ax=custom_ax, show=False)
+
+    assert returned_ax is custom_ax
+    assert len(custom_ax.lines) == 1
+
+
+def test_plot_measurements_show_false(monkeypatch):
+    """
+    Test that show=False suppresses calling plt.show(), while show=True invokes it.
+    """
+    show_called = []
+    monkeypatch.setattr(plt, "show", lambda: show_called.append(True))
+
+    lv_x = np.array([1.0, 2.0])
+    lv_y = np.array([3.0, 4.0])
+
+    # With show=False, plt.show should not be called
+    ax = plot_measurements(lv_x, lv_y, show=False)
+    assert isinstance(ax, plt.Axes)
+    assert len(show_called) == 0
+
+    # With show=True (default), plt.show should be called
+    plot_measurements(lv_x, lv_y, show=True)
+    assert len(show_called) == 1
+
+
+def test_plot_measurements_composition():
+    """
+    Test that multiple plot_measurements calls can share the same ax,
+    enabling composite multi-source plots.
+    """
+    lv_x1 = np.array([1.0, 2.0, 3.0])
+    lv_y1 = np.array([10.0, 20.0, 30.0])
+    lv_x2 = np.array([1.0, 2.0, 3.0])
+    lv_y2 = np.array([5.0, 15.0, 25.0])
+
+    ax = plot_measurements(lv_x1, lv_y1, line_labels=["Series 1"], show=False)
+    plot_measurements(lv_x2, lv_y2, line_labels=["Series 2"], ax=ax, show=False)
+
+    assert len(ax.lines) == 2
+
