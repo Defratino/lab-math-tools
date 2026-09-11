@@ -74,10 +74,10 @@ df = lmt.derivative_saap(lambda x: x**2, x=2.0)
 v_df = lmt.derivative_saap(lambda x: np.array([x**2, x**3]), x=2.0)
 
 # Gradient: nabla(x^2 * y) at [2.0, 3.0] -> [12.0, 4.0]
-grad = lmt.av_gradient_saap(lambda v: v[0]**2 * v[1], av_x=np.array([2.0, 3.0]))
+grad = lmt.v_gradient_saap(lambda v: v[0]**2 * v[1], v_x=np.array([2.0, 3.0]))
 
 # Jacobian matrix of R^2 -> R^2: [x + y, x * y]
-jac = lmt.am_jacobian_saap(lambda v: np.array([v[0] + v[1], v[0] * v[1]]), av_x=np.array([2.0, 3.0]))
+jac = lmt.m_jacobian_saap(lambda v: np.array([v[0] + v[1], v[0] * v[1]]), v_x=np.array([2.0, 3.0]))
 ```
 
 ### 3. Numerical Integration
@@ -121,7 +121,7 @@ vy = lmt.propagate_covariance_saap(lambda v: np.array([v[0] + v[1], v[0] * v[1]]
 1. All multidimensional variables are defined as `numpy.ndarray`.
     * **Vectors:** Prefixed with `v{n}_`, where `n` is the dimension (e.g., `v3_velocity`).
     * **Matrices:** Prefixed with `m{n}{l}_`, where `n` and `l` are the dimensions (e.g., `m33_rotation`).
-    * **Abstract/Dynamic Dimensions:** If dimensions are not pre-defined or accept a range, use `av_` (abstract vector) or `am_` (abstract matrix).
+    * **Abstract/Dynamic Dimensions:** If dimensions are not pre-defined or accept a range, use `v_` (abstract vector) or `m_` (abstract matrix).
 
 ### Custom Function Conventions
 Function names indicate their mathematical mapping domains:
@@ -130,12 +130,12 @@ Function names indicate their mathematical mapping domains:
 3. **Vector Input -> Single Output ($\mathbb{R}^n \to \mathbb{R}$):** Argument prefixed with input dimension, `f(v{n}_x)`
 4. **Vector Input -> Vector Output ($\mathbb{R}^n \to \mathbb{R}^m$):** Prefixed with output dimension and argument prefixed with input dimension, `v{m}_f(v{n}_x)`
 
-*(Note: If dimensions are abstract, `av_` replaces the `{n}` or `{m}` prefix).*
+*(Note: If dimensions are abstract, `v_` replaces the `{n}` or `{m}` prefix).*
 
 ### Functions as Inputs (Callbacks)
 1. For predefined scripts requiring functional arguments, the argument names will strictly follow the mapping signatures above (e.g., `def optimize(f, v3_x):`).
 2. For scripts accepting multiple function inputs of the same type, they will be numbered: `f1`, `f2`, `f3`, etc.
-3. If the functional argument must be a vector-valued function, the argument name will be `av_f` or `v{n}_f` depending on whether the vector's dimensions are abstract or pre-defined.
+3. If the functional argument must be a vector-valued function, the argument name will be `v_f` or `v{n}_f` depending on whether the vector's dimensions are abstract or pre-defined.
 4. If the functional argument is a scalar-valued function, the argument name will be `s_f`.
 
 ### Abbreviations & Terminology

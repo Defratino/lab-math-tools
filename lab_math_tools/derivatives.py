@@ -7,10 +7,10 @@ designed to handle multidimensional mappings (R -> R, R -> R^n, R^n -> R, R^n ->
 seamlessly through numpy broadcasting.
 
 Conventions followed:
-- `av_` : Abstract vector (numpy.ndarray with dynamic dimensions)
-- `am_` : Abstract matrix (numpy.ndarray with dynamic dimensions)
+- `v_` : Abstract vector (numpy.ndarray with dynamic dimensions)
+- `m_` : Abstract matrix (numpy.ndarray with dynamic dimensions)
 - `s_f` : Scalar-valued function
-- `av_f`: Vector-valued function
+- `v_f`: Vector-valued function
 - `f`   : Generic function (can output scalar or vector)
 """
 
@@ -37,7 +37,7 @@ def derivative_saap(
 
 def partial_derivative_saap(
     f: Callable[[np.ndarray], float | np.ndarray],
-    av_x: np.ndarray,
+    v_x: np.ndarray,
     idx: int = 0,
     h: float = 1e-5,
 ) -> float | np.ndarray:
@@ -48,54 +48,54 @@ def partial_derivative_saap(
     if h <= 0:
         raise ValueError("Step size h must be strictly positive.")
 
-    av_x_arr = np.asarray(av_x, dtype=float)
-    if idx < 0 or idx >= len(av_x_arr):
+    v_x_arr = np.asarray(v_x, dtype=float)
+    if idx < 0 or idx >= len(v_x_arr):
         raise IndexError("The index is out of bounds.")
 
-    av_x_plus_h = av_x_arr.copy()
-    av_x_plus_h[idx] += h
-    av_x_minus_h = av_x_arr.copy()
-    av_x_minus_h[idx] -= h
+    v_x_plus_h = v_x_arr.copy()
+    v_x_plus_h[idx] += h
+    v_x_minus_h = v_x_arr.copy()
+    v_x_minus_h[idx] -= h
 
-    return (f(av_x_plus_h) - f(av_x_minus_h)) / (2 * h)
+    return (f(v_x_plus_h) - f(v_x_minus_h)) / (2 * h)
 
 
-def av_gradient_saap(
+def v_gradient_saap(
     s_f: Callable[[np.ndarray], float],
-    av_x: np.ndarray,
+    v_x: np.ndarray,
     h: float = 1e-5,
 ) -> np.ndarray:
     """
     Calculates the gradient of a scalar function (R^n -> R) at a given point.
     """
-    av_x_arr = np.asarray(av_x, dtype=float)
-    return np.array([partial_derivative_saap(s_f, av_x_arr, idx, h) for idx in range(len(av_x_arr))])
+    v_x_arr = np.asarray(v_x, dtype=float)
+    return np.array([partial_derivative_saap(s_f, v_x_arr, idx, h) for idx in range(len(v_x_arr))])
 
 
 def divergence_saap(
-    av_f: Callable[[np.ndarray], np.ndarray],
-    av_x: np.ndarray,
+    v_f: Callable[[np.ndarray], np.ndarray],
+    v_x: np.ndarray,
     h: float = 1e-5,
 ) -> float:
     """
     Calculates the divergence of a vector field (R^n -> R^n) at a given point.
     """
-    av_x_arr = np.asarray(av_x, dtype=float)
-    out = np.asarray(av_f(av_x_arr))
-    if out.shape != av_x_arr.shape:
+    v_x_arr = np.asarray(v_x, dtype=float)
+    out = np.asarray(v_f(v_x_arr))
+    if out.shape != v_x_arr.shape:
         raise ValueError("The function must return a vector of the same dimension as the input.")
 
-    return float(sum(partial_derivative_saap(av_f, av_x_arr, idx, h)[idx] for idx in range(len(av_x_arr))))
+    return float(sum(partial_derivative_saap(v_f, v_x_arr, idx, h)[idx] for idx in range(len(v_x_arr))))
 
 
-def am_jacobian_saap(
-    av_f: Callable[[np.ndarray], np.ndarray],
-    av_x: np.ndarray,
+def m_jacobian_saap(
+    v_f: Callable[[np.ndarray], np.ndarray],
+    v_x: np.ndarray,
     h: float = 1e-5,
 ) -> np.ndarray:
     """
     Calculates the Jacobian matrix of a vector-valued function (R^n -> R^m) at a given point.
     The resulting matrix has dimensions (m, n).
     """
-    av_x_arr = np.asarray(av_x, dtype=float)
-    return np.column_stack([partial_derivative_saap(av_f, av_x_arr, idx, h) for idx in range(len(av_x_arr))])
+    v_x_arr = np.asarray(v_x, dtype=float)
+    return np.column_stack([partial_derivative_saap(v_f, v_x_arr, idx, h) for idx in range(len(v_x_arr))])

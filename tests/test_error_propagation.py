@@ -25,15 +25,15 @@ def test_propagate_uncertainty_vector_statistical():
     def s_f(v2_x: np.ndarray) -> float:
         return v2_x[0] * v2_x[1]
 
-    av_vals = np.array([10.0, 5.0])
-    av_errs = np.array([0.5, 0.2])
+    v_vals = np.array([10.0, 5.0])
+    v_errs = np.array([0.5, 0.2])
 
     # df/dx0 = x1 = 5. Term: 5 * 0.5 = 2.5
     # df/dx1 = x0 = 10. Term: 10 * 0.2 = 2.0
     # Stat error = sqrt(2.5^2 + 2.0^2) = sqrt(6.25 + 4.0) = sqrt(10.25)
     expected = np.sqrt(10.25)
 
-    result = propagate_uncertainty_saap(s_f, av_vals, av_errs, method="statistical")
+    result = propagate_uncertainty_saap(s_f, v_vals, v_errs, method="statistical")
     np.testing.assert_allclose(result, expected, rtol=1e-4)
 
 
@@ -42,11 +42,11 @@ def test_propagate_uncertainty_vector_absolute():
     def s_f(v2_x: np.ndarray) -> float:
         return v2_x[0] * v2_x[1]
 
-    av_vals = np.array([10.0, 5.0])
-    av_errs = np.array([0.5, 0.2])
+    v_vals = np.array([10.0, 5.0])
+    v_errs = np.array([0.5, 0.2])
 
     # Abs error = |2.5| + |2.0| = 4.5
-    result = propagate_uncertainty_saap(s_f, av_vals, av_errs, method="absolute")
+    result = propagate_uncertainty_saap(s_f, v_vals, v_errs, method="absolute")
     np.testing.assert_allclose(result, 4.5, rtol=1e-4)
 
 
@@ -83,14 +83,14 @@ def test_propagate_covariance_saap():
 
     v2_x = np.array([2.0, 3.0])
     # J = [[1, 1], [3, 2]]
-    am_vx = np.array([[0.1, 0.0], [0.0, 0.2]])
+    m_vx = np.array([[0.1, 0.0], [0.0, 0.2]])
 
     # J * Vx * J.T = [[1, 1], [3, 2]] * [[0.1, 0], [0, 0.2]] * [[1, 3], [1, 2]]
     # = [[0.1, 0.2], [0.3, 0.4]] * [[1, 3], [1, 2]]
     # = [[0.3, 0.7], [0.7, 1.7]]
     expected_vy = np.array([[0.3, 0.7], [0.7, 1.7]])
 
-    result = propagate_covariance_saap(v2_f, v2_x, am_vx)
+    result = propagate_covariance_saap(v2_f, v2_x, m_vx)
     np.testing.assert_allclose(result, expected_vy, rtol=1e-4)
 
 
@@ -98,9 +98,9 @@ def test_propagate_covariance_mismatch():
     """Test that a non-matching covariance dimension raises ValueError."""
     def v2_f(v_x): return np.array([v_x[0], v_x[1]])
     v_x = np.array([1.0, 2.0])
-    am_vx_bad = np.array([[0.1, 0.0, 0.0], [0.0, 0.2, 0.0]])  # not 2x2
+    m_vx_bad = np.array([[0.1, 0.0, 0.0], [0.0, 0.2, 0.0]])  # not 2x2
     with pytest.raises(ValueError, match="Input covariance matrix must be square"):
-        propagate_covariance_saap(v2_f, v_x, am_vx_bad)
+        propagate_covariance_saap(v2_f, v_x, m_vx_bad)
 
 
 # --- error_contribution_saap tests ---
@@ -111,13 +111,13 @@ def test_error_contribution_saap():
     def s_f(v2_x: np.ndarray) -> float:
         return v2_x[0] * v2_x[1]
 
-    av_vals = np.array([10.0, 5.0])
-    av_errs = np.array([0.5, 0.2])
+    v_vals = np.array([10.0, 5.0])
+    v_errs = np.array([0.5, 0.2])
 
     # Variances: 2.5^2 = 6.25, 2.0^2 = 4.0. Total = 10.25
     expected_contributions = np.array([6.25 / 10.25, 4.0 / 10.25])
 
-    result = error_contribution_saap(s_f, av_vals, av_errs)
+    result = error_contribution_saap(s_f, v_vals, v_errs)
     np.testing.assert_allclose(result, expected_contributions, rtol=1e-4)
 
 
@@ -136,13 +136,13 @@ def test_relative_uncertainty_saap():
     def s_f(v2_x: np.ndarray) -> float:
         return v2_x[0] * v2_x[1]
 
-    av_vals = np.array([10.0, 5.0])  # Nominal f = 50.0
-    av_errs = np.array([0.5, 0.2])
+    v_vals = np.array([10.0, 5.0])  # Nominal f = 50.0
+    v_errs = np.array([0.5, 0.2])
 
     abs_err = np.sqrt(10.25)
     expected_rel_err = abs_err / 50.0
 
-    result = relative_uncertainty_saap(s_f, av_vals, av_errs)
+    result = relative_uncertainty_saap(s_f, v_vals, v_errs)
     np.testing.assert_allclose(result, expected_rel_err, rtol=1e-4)
 
 
@@ -151,11 +151,11 @@ def test_relative_uncertainty_zero_division():
     def s_f(v2_x: np.ndarray) -> float:
         return v2_x[0] * v2_x[1]
 
-    av_vals = np.array([0.0, 5.0])  # Nominal f = 0.0
-    av_errs = np.array([0.5, 0.2])
+    v_vals = np.array([0.0, 5.0])  # Nominal f = 0.0
+    v_errs = np.array([0.5, 0.2])
 
     with pytest.raises(ZeroDivisionError):
-        relative_uncertainty_saap(s_f, av_vals, av_errs)
+        relative_uncertainty_saap(s_f, v_vals, v_errs)
 
 
 def test_error_propagation_invalid_h():
