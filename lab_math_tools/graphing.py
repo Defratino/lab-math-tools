@@ -135,22 +135,22 @@ def plot_measurements(m_x: Union[np.ndarray, List[np.ndarray]],
     plt.show()
     return
 
-def turn_list_of_vectors_to_matrix(v_vectors : List[np.ndarray]) -> np.ndarray:
+def turn_list_of_vectors_to_matrix(lv_vectors : List[np.ndarray]) -> np.ndarray:
     """
     Turn an list of vectors into a matrix of measurements.
     
     Parameters:
-    * v_vectors (List[np.ndarray]): A list of vectors (1D ndarrays).
+    * lv_vectors (List[np.ndarray]): A list of vectors (1D ndarrays).
     """
-    if not v_vectors:
+    if not lv_vectors:
         return np.array([]).reshape(0, 0)
 
     # Find max length vector in the array
-    max_len = max(len(vec) for vec in v_vectors)
+    max_len = max(len(v_vec) for v_vec in lv_vectors)
 
     # Pad shorter vectors with np.nan (convert to float first to avoid type errors)
     lv_padded = []
-    for vec in v_vectors:
+    for vec in lv_vectors:
         float_vec = vec.astype(float)
         padded_vec = np.pad(
             float_vec, 
