@@ -122,6 +122,13 @@ vy = lmt.propagate_covariance_saap(lambda v: np.array([v[0] + v[1], v[0] * v[1]]
     * **Vectors:** Prefixed with `v{n}_`, where `n` is the dimension (e.g., `v3_velocity`).
     * **Matrices:** Prefixed with `m{n}{l}_`, where `n` and `l` are the dimensions (e.g., `m33_rotation`).
     * **Abstract/Dynamic Dimensions:** If dimensions are not pre-defined or accept a range, use `v_` (abstract vector) or `m_` (abstract matrix).
+2. **Python Lists:**
+    * **Numerical Lists:** Prefixed according to element type:
+        * List of numbers: `l_` (e.g., `l_numbers`).
+        * List of vectors: `lv_` (e.g., `lv_vectors` or `lv2_vectors`).
+        * List of matrices: `lm_` (e.g., `lm_matrices` or `lm22_matrices`).
+    * **Non-Numerical Lists:** Lists of strings or metadata (e.g., `line_labels`, `linestyles`, `markers`) do **not** require the `l_` prefix.
+
 
 ### Custom Function Conventions
 Function names indicate their mathematical mapping domains:

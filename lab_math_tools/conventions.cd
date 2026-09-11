@@ -5,12 +5,15 @@ General Writing Conventions
         c. Abstract/Dynamic Dimensions: If dimensions are not pre-defined or accept a range,
             dont include any prefix - use v_ for vector and m_ for matrix.
 
-    2. Python lists will be notes with an l_ before their name. They can be a list of numbers (l_), 
-        vectors (lv_) or matrices (lm_). Dimentions of vectors or matrices inside a list don't have to be the same across the list.
-        a. [1, 2, 3] -> l_numbers
+    2. Python lists containing numerical data will be noted with a prefix before their name. 
+        They can be a list of numbers (l_), vectors (lv_) or matrices (lm_).
+        Dimensions of vectors or matrices inside a list don't have to be the same across the list.
+        Lists of strings or non-numerical metadata (e.g., `line_labels`, `linestyles`) do NOT need the `l_` prefix (but numeral lists do!).
+        a. [1, 2, 3] -> l_numbers (numeral lists require `l_`)
         b. [np.array([1, 2]), np.array([1, 2]), np.array([1, 2])] -> lv2_vectors
         c. [np.array([[1, 2], [3, 4]]), np.array([[1, 2], [3, 4]]), np.array([[1, 2], [3, 4]])] -> lm22_matrices
         d. [np.array([1, 2]), np.array([1, 2, 3])] -> lv_vectors
+        e. ["label1", "label2"] -> line_labels (string lists do not need `l_`)
 
 Custom Function Conventions
     Function names indicate their mathematical mapping domains:

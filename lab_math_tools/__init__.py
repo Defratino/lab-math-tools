@@ -17,6 +17,10 @@ from lab_math_tools.error_propagation import (
     propagate_uncertainty_saap,
     relative_uncertainty_saap,
 )
+from lab_math_tools.graphing import (
+    plot_measurements,
+    turn_list_of_vectors_to_matrix,
+)
 from lab_math_tools.integration import (
     integral_over_shape,
     integral_trapezoidal,
@@ -39,4 +43,7 @@ __all__ = [
     "propagate_covariance_saap",
     "error_contribution_saap",
     "relative_uncertainty_saap",
+    # Graphing
+    "plot_measurements",
+    "turn_list_of_vectors_to_matrix",
 ]
