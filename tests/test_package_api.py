@@ -5,9 +5,9 @@ def test_package_exports():
     expected_exports = [
         "derivative_saap",
         "partial_derivative_saap",
-        "av_gradient_saap",
+        "v_gradient_saap",
         "divergence_saap",
-        "am_jacobian_saap",
+        "m_jacobian_saap",
         "integral_trapezoidal",
         "integral_over_shape",
         "propagate_uncertainty_saap",

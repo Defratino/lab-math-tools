@@ -7,10 +7,10 @@ are designed to handle multidimensional mappings (R -> R, R -> R^n, R^n -> R, R^
 seamlessly through numpy broadcasting.
 
 Conventions followed:
-- `av_` : Abstract vector (numpy.ndarray with dynamic dimensions)
-- `am_` : Abstract matrix (numpy.ndarray with dynamic dimensions)
+- `v_` : Abstract vector (numpy.ndarray with dynamic dimensions)
+- `m_` : Abstract matrix (numpy.ndarray with dynamic dimensions)
 - `s_f` : Scalar-valued function
-- `av_f`: Vector-valued function
+- `v_f`: Vector-valued function
 - `f`   : Generic function (can output scalar or vector)
 """
 
@@ -65,7 +65,7 @@ def integral_trapezoidal(
 def integral_over_shape(
     s_f: Callable[[np.ndarray], float],
     s_shape: Callable[[np.ndarray], float | int | bool],
-    am_bounds: np.ndarray,
+    m_bounds: np.ndarray,
     n_samples: int = 100000,
     rng: np.random.Generator | int | None = None,
 ) -> float:
@@ -76,38 +76,38 @@ def integral_over_shape(
     Parameters:
     * s_f (callable): The scalar function to integrate (R^n -> R).
     * s_shape (callable): Indicator function defining the region (R^n -> [0, 1]).
-    * am_bounds (np.ndarray): An (n, 2) matrix of [min, max] bounding box limits for each dimension.
+    * m_bounds (np.ndarray): An (n, 2) matrix of [min, max] bounding box limits for each dimension.
     * n_samples (int): Number of random points for the Monte Carlo estimation.
     * rng (np.random.Generator | int | None): Optional random number generator or seed for reproducibility.
     
     Mathematical Formulation:
     V ≈ (V_box / N) * Σ(f(x(i)) * shape(x(i)))
     """
-    am_bounds_arr = np.asarray(am_bounds, dtype=float)
-    if am_bounds_arr.ndim != 2 or am_bounds_arr.shape[1] != 2:
-        raise ValueError("am_bounds must be a 2D array of shape (n_dims, 2) with [min, max] limits.")
-    if np.any(am_bounds_arr[:, 0] > am_bounds_arr[:, 1]):
+    m_bounds_arr = np.asarray(m_bounds, dtype=float)
+    if m_bounds_arr.ndim != 2 or m_bounds_arr.shape[1] != 2:
+        raise ValueError("m_bounds must be a 2D array of shape (n_dims, 2) with [min, max] limits.")
+    if np.any(m_bounds_arr[:, 0] > m_bounds_arr[:, 1]):
         raise ValueError("Lower bounds must not exceed upper bounds.")
     if n_samples <= 0:
         raise ValueError("Number of samples must be strictly positive.")
 
     generator = rng if isinstance(rng, np.random.Generator) else np.random.default_rng(rng)
-    n_dims = am_bounds_arr.shape[0]
+    n_dims = m_bounds_arr.shape[0]
 
     # Generate random points within the bounding box
-    am_random_points = generator.uniform(
-        low=am_bounds_arr[:, 0],
-        high=am_bounds_arr[:, 1],
+    m_random_points = generator.uniform(
+        low=m_bounds_arr[:, 0],
+        high=m_bounds_arr[:, 1],
         size=(n_samples, n_dims),
     )
 
     # Calculate bounding box volume
-    box_volume = float(np.prod(am_bounds_arr[:, 1] - am_bounds_arr[:, 0]))
+    box_volume = float(np.prod(m_bounds_arr[:, 1] - m_bounds_arr[:, 0]))
 
     # Attempt vectorized evaluation (fast path); fall back to sample-by-sample evaluation
     try:
-        f_vals = np.asarray(s_f(am_random_points))
-        shape_vals = np.asarray(s_shape(am_random_points))
+        f_vals = np.asarray(s_f(m_random_points))
+        shape_vals = np.asarray(s_shape(m_random_points))
         if f_vals.shape == (n_samples,) and shape_vals.shape == (n_samples,):
             total_sum = float(np.sum(f_vals * shape_vals))
         else:
@@ -115,7 +115,7 @@ def integral_over_shape(
     except Exception:
         total_sum = 0.0
         for i in range(n_samples):
-            v_x = am_random_points[i]
+            v_x = m_random_points[i]
             w = s_shape(v_x)
             if w:
                 total_sum += s_f(v_x) * w

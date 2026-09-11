@@ -7,10 +7,10 @@ designed to handle multidimensional mappings (R -> R, R -> R^n, R^n -> R, R^n ->
 seamlessly through numpy broadcasting.
 
 Conventions followed:
-- `av_` : Abstract vector (numpy.ndarray with dynamic dimensions)
-- `am_` : Abstract matrix (numpy.ndarray with dynamic dimensions)
+- `v_` : Abstract vector (numpy.ndarray with dynamic dimensions)
+- `m_` : Abstract matrix (numpy.ndarray with dynamic dimensions)
 - `s_f` : Scalar-valued function
-- `av_f`: Vector-valued function
+- `v_f`: Vector-valued function
 - `f`   : Generic function (can output scalar or vector)
 """
 
@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import Callable
 
 import numpy as np
-from lab_math_tools.derivatives import am_jacobian_saap, av_gradient_saap, derivative_saap
+from lab_math_tools.derivatives import m_jacobian_saap, v_gradient_saap, derivative_saap
 
 
 def propagate_uncertainty_saap(
@@ -80,34 +80,34 @@ def propagate_uncertainty_saap(
     if x_arr.shape != dx_arr.shape:
         raise ValueError("Value and uncertainty vectors must have the same dimension.")
 
-    av_sensitivities = av_gradient_saap(f, x_arr, h)
-    av_terms = av_sensitivities * dx_arr
+    v_sensitivities = v_gradient_saap(f, x_arr, h)
+    v_terms = v_sensitivities * dx_arr
 
     if method == "statistical":
-        return float(np.sqrt(np.sum(av_terms**2)))
+        return float(np.sqrt(np.sum(v_terms**2)))
     elif method == "absolute":
-        return float(np.sum(np.abs(av_terms)))
+        return float(np.sum(np.abs(v_terms)))
     else:
         raise ValueError("Method must be 'statistical' or 'absolute'.")
 
 
 def propagate_covariance_saap(
-    av_f: Callable[[np.ndarray], np.ndarray],
-    av_x: np.ndarray,
-    am_vx: np.ndarray,
+    v_f: Callable[[np.ndarray], np.ndarray],
+    v_x: np.ndarray,
+    m_vx: np.ndarray,
     h: float = 1e-5,
 ) -> np.ndarray:
     """
     Propagates a covariance matrix through a vector-valued function (R^n -> R^m).
     
     Parameters:
-    * av_f (callable): The vector-valued objective function.
-    * av_x (np.ndarray): The nominal values of the independent variables (length n).
-    * am_vx (np.ndarray): The (n, n) covariance matrix of the inputs.
+    * v_f (callable): The vector-valued objective function.
+    * v_x (np.ndarray): The nominal values of the independent variables (length n).
+    * m_vx (np.ndarray): The (n, n) covariance matrix of the inputs.
     * h (float): The step size for the numerical derivative approximation.
     
     Returns:
-    * np.ndarray: The (m, m) output covariance matrix (am_vy).
+    * np.ndarray: The (m, m) output covariance matrix (m_vy).
     
     Mathematical Formulation:
     V_y = J * V_x * J.T
@@ -115,22 +115,22 @@ def propagate_covariance_saap(
     if h <= 0:
         raise ValueError("Step size h must be strictly positive.")
 
-    av_x_arr = np.asarray(av_x, dtype=float)
-    am_vx_arr = np.asarray(am_vx, dtype=float)
-    n = len(av_x_arr)
+    v_x_arr = np.asarray(v_x, dtype=float)
+    m_vx_arr = np.asarray(m_vx, dtype=float)
+    n = len(v_x_arr)
 
-    if am_vx_arr.shape != (n, n):
-        raise ValueError("Input covariance matrix must be square with dimensions matching av_x.")
+    if m_vx_arr.shape != (n, n):
+        raise ValueError("Input covariance matrix must be square with dimensions matching v_x.")
 
-    am_j = am_jacobian_saap(av_f, av_x_arr, h)
-    am_vy = am_j @ am_vx_arr @ am_j.T
-    return am_vy
+    m_j = m_jacobian_saap(v_f, v_x_arr, h)
+    m_vy = m_j @ m_vx_arr @ m_j.T
+    return m_vy
 
 
 def error_contribution_saap(
     s_f: Callable[[np.ndarray], float],
-    av_x: np.ndarray,
-    av_dx: np.ndarray,
+    v_x: np.ndarray,
+    v_dx: np.ndarray,
     h: float = 1e-5,
 ) -> np.ndarray:
     """
@@ -139,8 +139,8 @@ def error_contribution_saap(
     
     Parameters:
     * s_f (callable): The scalar-valued objective function.
-    * av_x (np.ndarray): The nominal values of the independent variables.
-    * av_dx (np.ndarray): The absolute uncertainties (errors) associated with av_x.
+    * v_x (np.ndarray): The nominal values of the independent variables.
+    * v_dx (np.ndarray): The absolute uncertainties (errors) associated with v_x.
     * h (float): The step size for the numerical derivative approximation.
     
     Returns:
@@ -152,22 +152,22 @@ def error_contribution_saap(
     if h <= 0:
         raise ValueError("Step size h must be strictly positive.")
 
-    av_x_arr = np.asarray(av_x, dtype=float)
-    av_dx_arr = np.asarray(av_dx, dtype=float)
+    v_x_arr = np.asarray(v_x, dtype=float)
+    v_dx_arr = np.asarray(v_dx, dtype=float)
 
-    if av_x_arr.shape != av_dx_arr.shape:
+    if v_x_arr.shape != v_dx_arr.shape:
         raise ValueError("Value and uncertainty vectors must have the same dimension.")
 
-    av_sensitivities = av_gradient_saap(s_f, av_x_arr, h)
-    av_variance_terms = (av_sensitivities * av_dx_arr) ** 2
+    v_sensitivities = v_gradient_saap(s_f, v_x_arr, h)
+    v_variance_terms = (v_sensitivities * v_dx_arr) ** 2
 
-    total_variance = np.sum(av_variance_terms)
+    total_variance = np.sum(v_variance_terms)
 
     # Avoid division by zero if the total variance is entirely zero
     if total_variance == 0:
-        return np.zeros_like(av_variance_terms)
+        return np.zeros_like(v_variance_terms)
 
-    return av_variance_terms / total_variance
+    return v_variance_terms / total_variance
 
 
 def relative_uncertainty_saap(

@@ -51,12 +51,12 @@ def test_integral_over_shape_monte_carlo():
     def s_shape(v_x: np.ndarray) -> float:
         return 1.0 if (0.0 <= v_x[0] <= 1.0 and 0.0 <= v_x[1] <= 1.0) else 0.0
 
-    am_bounds = np.array([
+    m_bounds = np.array([
         [0.0, 1.0],  # x bounds
         [0.0, 1.0],  # y bounds
     ])
 
-    result = integral_over_shape(s_f, s_shape, am_bounds, n_samples=50000, rng=42)
+    result = integral_over_shape(s_f, s_shape, m_bounds, n_samples=50000, rng=42)
     np.testing.assert_allclose(result, 1.0, rtol=0.03)
 
 
@@ -68,8 +68,8 @@ def test_integral_over_shape_vectorized():
     def vshape(pts: np.ndarray) -> np.ndarray:
         return ((pts[:, 0] >= 0) & (pts[:, 0] <= 1) & (pts[:, 1] >= 0) & (pts[:, 1] <= 1)).astype(float)
 
-    am_bounds = np.array([[0.0, 1.0], [0.0, 1.0]])
-    result = integral_over_shape(vf, vshape, am_bounds, n_samples=50000, rng=42)
+    m_bounds = np.array([[0.0, 1.0], [0.0, 1.0]])
+    result = integral_over_shape(vf, vshape, m_bounds, n_samples=50000, rng=42)
     np.testing.assert_allclose(result, 1.0, rtol=0.03)
 
 
@@ -79,7 +79,7 @@ def test_integral_over_shape_invalid_bounds():
     def s_shape(x): return 1.0
 
     # 1D bounds array instead of 2D
-    with pytest.raises(ValueError, match="am_bounds must be a 2D array"):
+    with pytest.raises(ValueError, match="m_bounds must be a 2D array"):
         integral_over_shape(s_f, s_shape, np.array([0.0, 1.0]))
 
     # Min > Max
