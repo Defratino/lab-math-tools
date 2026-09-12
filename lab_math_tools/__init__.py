@@ -18,6 +18,7 @@ from lab_math_tools.error_propagation import (
     relative_uncertainty_saap,
 )
 from lab_math_tools.graphing import (
+    add_zoom_inset,
     plot_measurements,
     turn_list_of_vectors_to_matrix,
 )
@@ -46,4 +47,5 @@ __all__ = [
     # Graphing
     "plot_measurements",
     "turn_list_of_vectors_to_matrix",
+    "add_zoom_inset",
 ]

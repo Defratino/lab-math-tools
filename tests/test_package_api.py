@@ -16,6 +16,7 @@ def test_package_exports():
         "relative_uncertainty_saap",
         "plot_measurements",
         "turn_list_of_vectors_to_matrix",
+        "add_zoom_inset",
     ]
 
     for export_name in expected_exports:

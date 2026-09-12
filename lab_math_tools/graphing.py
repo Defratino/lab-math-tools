@@ -21,6 +21,27 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 
+# Preset bounds for add_zoom_inset: (x0, y0, width, height) in normalized parent axes coordinates [0, 1]
+_INSET_PRESETS: dict[str, tuple[float, float, float, float]] = {
+    "upper_right": (0.55, 0.55, 0.4, 0.4),
+    "upper_left": (0.05, 0.55, 0.4, 0.4),
+    "upper_middle": (0.30, 0.55, 0.4, 0.4),
+    "middle_right": (0.55, 0.30, 0.4, 0.4),
+    "middle_left": (0.05, 0.30, 0.4, 0.4),
+    "center": (0.30, 0.30, 0.4, 0.4),
+    "lower_right": (0.55, 0.05, 0.4, 0.4),
+    "lower_left": (0.05, 0.05, 0.4, 0.4),
+    "lower_middle": (0.30, 0.05, 0.4, 0.4),
+}
+
+# Default indicator style parameters for indicate_inset_zoom
+_INDICATOR_DEFAULTS: dict[str, Any] = {
+    "edgecolor": "black",
+    "linewidth": 1.0,
+    "linestyle": "-",
+    "alpha": 1.0,
+}
+
 
 def plot_measurements(
     lv_x: Any = None,
@@ -350,5 +371,127 @@ def turn_list_of_vectors_to_matrix(lv_vectors: Sequence[Any]) -> np.ndarray:
 
     return np.array(lv_padded)
 
-    
-    
+
+def add_zoom_inset(
+    ax: plt.Axes,
+    x_range: tuple[float, float] | Sequence[float],
+    y_range: tuple[float, float] | Sequence[float],
+    inset_bounds: tuple[float, float, float, float] | Sequence[float] | str = "upper_right",
+    zoom_labels: bool = False,
+    indicator_settings: dict[str, Any] | None = None,
+    *,
+    show: bool = True,
+) -> plt.Axes:
+    """
+    Add a zoomed-in inset panel to an existing Matplotlib Axes object.
+
+    Copies all existing line plots from the parent axes into the inset axes,
+    sets the zoomed viewing limits, and draws indicator zoom lines and rectangle.
+
+    Parameters:
+    * ax (plt.Axes): The parent axes containing the plot to zoom into.
+    * x_range (tuple[float, float]): (x_min, x_max) limits for the zoom view.
+    * y_range (tuple[float, float]): (y_min, y_max) limits for the zoom view.
+    * inset_bounds (tuple[float, float, float, float] | str): Position and size of the inset.
+        Can be a tuple (x0, y0, width, height) in normalized parent axes coordinates [0, 1],
+        or one of the preset strings: "upper_right", "upper_left", "upper_middle",
+        "middle_right", "middle_left", "center", "lower_right", "lower_left", "lower_middle".
+        Default is "upper_right".
+    * zoom_labels (bool): Whether to show tick labels on the inset axes. Default is False.
+    * indicator_settings (dict[str, Any] | None): Style settings for the zoom indicator
+        box and connector lines. Supported keys: 'edgecolor', 'linewidth', 'linestyle', 'alpha'.
+        Default is None (uses standard defaults: black, width 1.0, solid line, alpha 1.0).
+    * show (bool, keyword-only): Whether to call plt.show(). Default is True.
+
+    Returns:
+    * plt.Axes: The newly created inset Axes object.
+    """
+    # Validate and resolve inset_bounds
+    if isinstance(inset_bounds, str):
+        if inset_bounds not in _INSET_PRESETS:
+            raise ValueError(
+                f"Unknown inset preset '{inset_bounds}'. Valid presets: {list(_INSET_PRESETS.keys())}"
+            )
+        inset_bounds_tuple = _INSET_PRESETS[inset_bounds]
+    elif isinstance(inset_bounds, (tuple, list)):
+        if len(inset_bounds) != 4:
+            raise ValueError(
+                f"inset_bounds tuple must have 4 elements (x0, y0, width, height), got {len(inset_bounds)}"
+            )
+        inset_bounds_tuple = (
+            float(inset_bounds[0]),
+            float(inset_bounds[1]),
+            float(inset_bounds[2]),
+            float(inset_bounds[3]),
+        )
+    else:
+        raise TypeError(
+            f"inset_bounds must be a 4-tuple of floats or a preset string, got {type(inset_bounds).__name__}"
+        )
+
+    # Validate ranges
+    if len(x_range) != 2 or x_range[0] >= x_range[1]:
+        raise ValueError(
+            f"x_range must be a tuple of (x_min, x_max) with x_min < x_max, got {x_range}"
+        )
+    if len(y_range) != 2 or y_range[0] >= y_range[1]:
+        raise ValueError(
+            f"y_range must be a tuple of (y_min, y_max) with y_min < y_max, got {y_range}"
+        )
+
+    # Validate and resolve indicator_settings
+    resolved_indicator = dict(_INDICATOR_DEFAULTS)
+    if indicator_settings is not None:
+        if not isinstance(indicator_settings, dict):
+            raise TypeError(
+                f"indicator_settings must be a dictionary, got {type(indicator_settings).__name__}"
+            )
+        for key, val in indicator_settings.items():
+            if key not in _INDICATOR_DEFAULTS:
+                raise ValueError(
+                    f"Unknown indicator_settings key '{key}'. Valid keys: {list(_INDICATOR_DEFAULTS.keys())}"
+                )
+            resolved_indicator[key] = val
+
+    # Create the inset axes
+    ax_inset = ax.inset_axes(inset_bounds_tuple)
+
+    # Copy all line plots from parent ax into inset ax
+    for line in ax.get_lines():
+        ax_inset.plot(
+            line.get_xdata(),
+            line.get_ydata(),
+            color=line.get_color(),
+            linestyle=line.get_linestyle(),
+            linewidth=line.get_linewidth(),
+            marker=line.get_marker(),
+            markersize=line.get_markersize(),
+            markerfacecolor=line.get_markerfacecolor(),
+            markeredgecolor=line.get_markeredgecolor(),
+            markeredgewidth=line.get_markeredgewidth(),
+            alpha=line.get_alpha(),
+        )
+
+    # Set limits for the zoom view
+    ax_inset.set_xlim(x_range[0], x_range[1])
+    ax_inset.set_ylim(y_range[0], y_range[1])
+
+    # Configure tick labels
+    if not zoom_labels:
+        ax_inset.tick_params(labelleft=False, labelbottom=False)
+
+    # Draw indicator box and connectors
+    ax.indicate_inset_zoom(ax_inset, **resolved_indicator)
+
+    if show:
+        plt.show()
+
+    return ax_inset
+
+
+__all__ = [
+    "plot_measurements",
+    "turn_list_of_vectors_to_matrix",
+    "add_zoom_inset",
+]
+
