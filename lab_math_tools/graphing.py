@@ -456,6 +456,10 @@ def add_zoom_inset(
     # Create the inset axes
     ax_inset = ax.inset_axes(inset_bounds_tuple)
 
+    # Mirror the parent's grid state on the inset
+    parent_grid_visible = ax.xaxis.majorTicks[0].gridline.get_visible() if ax.xaxis.majorTicks else False
+    ax_inset.grid(parent_grid_visible)
+
     # Copy all line plots from parent ax into inset ax
     for line in ax.get_lines():
         ax_inset.plot(
@@ -480,8 +484,12 @@ def add_zoom_inset(
     if not zoom_labels:
         ax_inset.tick_params(labelleft=False, labelbottom=False)
 
-    # Draw indicator box and connectors
-    ax.indicate_inset_zoom(ax_inset, **resolved_indicator)
+    # Draw indicator box and connectors.
+    # By default Matplotlib hides some connector lines based on inset placement heuristics,
+    # which causes only 2 of the 4 lines to appear. Force all 4 connectors visible.
+    inset_indicator = ax.indicate_inset_zoom(ax_inset, **resolved_indicator)
+    for connector in inset_indicator.connectors:
+        connector.set_visible(True)
 
     if show:
         plt.show()
