@@ -17,6 +17,11 @@ A lightweight, robust Python library for numerical calculus and experimental err
   - Multi-output covariance matrix propagation via Jacobian transformation ($\mathbf{\Sigma}_y = \mathbf{J} \mathbf{\Sigma}_x \mathbf{J}^T$).
   - Variance budget decomposition calculating the fractional contribution of each variable to total variance.
   - Relative / fractional uncertainty calculations.
+- **2D Data Graphing & Measurement Visualization**:
+  - Multi-series 2D curve plotting (`plot_measurements`) with shared or independent X-value domains (`lv_x`, `lv_y`).
+  - Flexible color modes: smooth two-color gradients (`"gradient"`), colormap sampling (`"colormap"` e.g., `viridis`, `plasma`), or explicit per-series colors (`"specific"`).
+  - Object-oriented plotting workflow: accepts and returns Matplotlib `Axes` for modular layering and composition.
+  - Interactive & publication-ready zoom insets (`add_zoom_inset`): 9 preset positions (`"upper_right"`, `"lower_left"`, etc.) or custom coordinates, parent grid mirroring, configurable indicator box & connector styles (`indicator_settings`), and smart non-obstructive connector lines.
 - **Modern Python Standards**:
   - Full typing annotations with PEP 561 (`py.typed`) support for Pyright/MyPy.
   - Cross-platform automated CI running on Python 3.10–3.12.
@@ -111,6 +116,41 @@ weights = lmt.error_contribution_saap(lambda v: v[0] * v[1], vals, errs)
 # Covariance matrix propagation: Vy = J * Vx * J^T
 vx = np.diag([0.1, 0.2])
 vy = lmt.propagate_covariance_saap(lambda v: np.array([v[0] + v[1], v[0] * v[1]]), vals, vx)
+```
+
+### 5. 2D Data Graphing & Zoom Insets
+
+```python
+# 1. Multi-series plotting with custom colors, labels, and grid
+v_x = np.linspace(0, 10, 500)
+v_y1 = np.sin(v_x)
+v_y2 = v_y1 + 0.03 * np.sin(30 * v_x)
+
+ax = lmt.plot_measurements(
+    lv_x=v_x,
+    lv_y=[v_y1, v_y2],
+    line_labels=["Carrier Wave", "Carrier + High-Freq Ripple"],
+    color_method="specific",
+    colors=["#1f77b4", "#ff7f0e"],
+    linestyles=["-", "-"],
+    markers="",
+    title="Signal Modulation and Zoom Analysis",
+    x_label="Time [ms]",
+    y_label="Voltage [mV]",
+    grid=True,
+    show=False,
+)
+
+# 2. Add a precision zoom inset onto the ripple peak
+ax_inset = lmt.add_zoom_inset(
+    ax=ax,
+    x_range=(1.2, 1.9),
+    y_range=(0.92, 1.08),
+    inset_bounds="upper_right",  # or custom tuple (x0, y0, w, h)
+    zoom_labels=True,
+    indicator_settings={"edgecolor": "#2c3e50", "linewidth": 1.2, "linestyle": "-"},
+    show=True,
+)
 ```
 
 ---
