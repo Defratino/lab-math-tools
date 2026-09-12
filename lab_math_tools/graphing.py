@@ -485,11 +485,46 @@ def add_zoom_inset(
         ax_inset.tick_params(labelleft=False, labelbottom=False)
 
     # Draw indicator box and connectors.
-    # By default Matplotlib hides some connector lines based on inset placement heuristics,
-    # which causes only 2 of the 4 lines to appear. Force all 4 connectors visible.
+    # Only show "outer" connectors: those whose straight line from the zoom rectangle
+    # corner to the inset corner does NOT pass through the interior of the inset box.
+    # (Connectors that pass behind the inset are visually occluded and unnecessary.)
+    #
+    # Geometric rule per inset corner C = (cx, cy) in axes coords:
+    #   The line from zoom corner A passes through the inset interior only when A is
+    #   in the inward-facing quadrant of C — i.e., A is "inside" the inset's half-space
+    #   on both axes. Specifically:
+    #     BL corner (ix0, iy0): inner when A.x > ix0  AND  A.y > iy0
+    #     TL corner (ix0, iy1): inner when A.x > ix0  AND  A.y < iy1
+    #     BR corner (ix1, iy0): inner when A.x < ix1  AND  A.y > iy0
+    #     TR corner (ix1, iy1): inner when A.x < ix1  AND  A.y < iy1
+    #
+    # connector.xy2 is the inset corner in inset-axes fraction coords (0.0 or 1.0 per axis).
+    # connector.xy1 is the zoom rectangle corner in parent data coordinates.
     inset_indicator = ax.indicate_inset_zoom(ax_inset, **resolved_indicator)
+
+    ix0, iy0, iw, ih = inset_bounds_tuple
+    ix1, iy1 = ix0 + iw, iy0 + ih
+    data_to_axes = ax.transData + ax.transAxes.inverted()
+
     for connector in inset_indicator.connectors:
+        # connector.xy1 = inset corner in inset-axes fraction coords (0.0 or 1.0 per axis)
+        # connector.xy2 = zoom rectangle corner in parent data coordinates
+        inset_frac_x, inset_frac_y = connector.xy1
+        zx, zy = data_to_axes.transform(connector.xy2)
+
+
+        if inset_frac_x < 0.5 and inset_frac_y < 0.5:    # BL inset corner
+            is_inner = zx > ix0 and zy > iy0
+        elif inset_frac_x < 0.5 and inset_frac_y >= 0.5:  # TL inset corner
+            is_inner = zx > ix0 and zy < iy1
+        elif inset_frac_x >= 0.5 and inset_frac_y < 0.5:  # BR inset corner
+            is_inner = zx < ix1 and zy > iy0
+        else:                                               # TR inset corner
+            is_inner = zx < ix1 and zy < iy1
+
         connector.set_visible(True)
+        if is_inner and resolved_indicator["linestyle"] == "-":
+            connector.set_linestyle("--")
 
     if show:
         plt.show()
@@ -502,4 +537,4 @@ __all__ = [
     "turn_list_of_vectors_to_matrix",
     "add_zoom_inset",
 ]
-
+
