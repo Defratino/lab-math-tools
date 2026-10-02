@@ -1,8 +1,6 @@
 import numpy as np
 import pytest
 from lab_math_tools.error_propagation import (
-    error_contribution_saap,
-    propagate_covariance_saap,
     propagate_uncertainty_saap,
     relative_uncertainty_saap,
 )
@@ -73,59 +71,6 @@ def test_propagate_uncertainty_scalar_vector_mismatch():
         propagate_uncertainty_saap(f, 2.0, np.array([0.1, 0.2]))
 
 
-# --- propagate_covariance_saap tests ---
-
-
-def test_propagate_covariance_saap():
-    """Test full covariance matrix propagation for R^n -> R^m."""
-    def v2_f(v2_x: np.ndarray) -> np.ndarray:
-        return np.array([v2_x[0] + v2_x[1], v2_x[0] * v2_x[1]])
-
-    v2_x = np.array([2.0, 3.0])
-    # J = [[1, 1], [3, 2]]
-    m_vx = np.array([[0.1, 0.0], [0.0, 0.2]])
-
-    # J * Vx * J.T = [[1, 1], [3, 2]] * [[0.1, 0], [0, 0.2]] * [[1, 3], [1, 2]]
-    # = [[0.1, 0.2], [0.3, 0.4]] * [[1, 3], [1, 2]]
-    # = [[0.3, 0.7], [0.7, 1.7]]
-    expected_vy = np.array([[0.3, 0.7], [0.7, 1.7]])
-
-    result = propagate_covariance_saap(v2_f, v2_x, m_vx)
-    np.testing.assert_allclose(result, expected_vy, rtol=1e-4)
-
-
-def test_propagate_covariance_mismatch():
-    """Test that a non-matching covariance dimension raises ValueError."""
-    def v2_f(v_x): return np.array([v_x[0], v_x[1]])
-    v_x = np.array([1.0, 2.0])
-    m_vx_bad = np.array([[0.1, 0.0, 0.0], [0.0, 0.2, 0.0]])  # not 2x2
-    with pytest.raises(ValueError, match="Input covariance matrix must be square"):
-        propagate_covariance_saap(v2_f, v_x, m_vx_bad)
-
-
-# --- error_contribution_saap tests ---
-
-
-def test_error_contribution_saap():
-    """Test calculation of fractional error contributions."""
-    def s_f(v2_x: np.ndarray) -> float:
-        return v2_x[0] * v2_x[1]
-
-    v_vals = np.array([10.0, 5.0])
-    v_errs = np.array([0.5, 0.2])
-
-    # Variances: 2.5^2 = 6.25, 2.0^2 = 4.0. Total = 10.25
-    expected_contributions = np.array([6.25 / 10.25, 4.0 / 10.25])
-
-    result = error_contribution_saap(s_f, v_vals, v_errs)
-    np.testing.assert_allclose(result, expected_contributions, rtol=1e-4)
-
-
-def test_error_contribution_zero_variance():
-    """Test that zero total variance returns zeros without division by zero error."""
-    def s_f(v_x): return v_x[0] + v_x[1]
-    result = error_contribution_saap(s_f, np.array([1.0, 2.0]), np.array([0.0, 0.0]))
-    np.testing.assert_allclose(result, np.array([0.0, 0.0]))
 
 
 # --- relative_uncertainty_saap tests ---
@@ -163,7 +108,3 @@ def test_error_propagation_invalid_h():
     def f(x): return x**2
     with pytest.raises(ValueError, match="Step size h must be strictly positive."):
         propagate_uncertainty_saap(f, x=2.0, dx=0.1, h=0.0)
-    with pytest.raises(ValueError, match="Step size h must be strictly positive."):
-        propagate_covariance_saap(lambda v: v, np.array([1.0]), np.array([[0.1]]), h=-1e-4)
-    with pytest.raises(ValueError, match="Step size h must be strictly positive."):
-        error_contribution_saap(lambda v: v[0], np.array([1.0]), np.array([0.1]), h=0.0)

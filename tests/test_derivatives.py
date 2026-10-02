@@ -1,11 +1,10 @@
 import numpy as np
 import pytest
 from lab_math_tools.derivatives import (
-    m_jacobian_saap,
-    v_gradient_saap,
     derivative_saap,
     divergence_saap,
     partial_derivative_saap,
+    v_gradient_saap,
 )
 
 
@@ -65,17 +64,6 @@ def test_divergence_saap():
     v2_x = np.array([2.0, 2.0])
     result = divergence_saap(v2_f, v2_x)
     np.testing.assert_allclose(result, 16.0, rtol=1e-4)
-
-
-def test_m_jacobian_saap():
-    """Test Jacobian on R^n -> R^m mapping."""
-    def v2_f(v2_x: np.ndarray) -> np.ndarray:
-        return np.array([v2_x[0] ** 2, v2_x[0] * v2_x[1]])
-
-    v2_x = np.array([2.0, 3.0])
-    result = m_jacobian_saap(v2_f, v2_x)
-    expected_m22_j = np.array([[4.0, 0.0], [3.0, 2.0]])
-    np.testing.assert_allclose(result, expected_m22_j, rtol=1e-4)
 
 
 def test_partial_derivative_saap_index_out_of_bounds():

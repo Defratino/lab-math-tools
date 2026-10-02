@@ -85,17 +85,4 @@ def divergence_saap(
     if out.shape != v_x_arr.shape:
         raise ValueError("The function must return a vector of the same dimension as the input.")
 
-    return float(sum(partial_derivative_saap(v_f, v_x_arr, idx, h)[idx] for idx in range(len(v_x_arr))))
-
-
-def m_jacobian_saap(
-    v_f: Callable[[np.ndarray], np.ndarray],
-    v_x: np.ndarray,
-    h: float = 1e-5,
-) -> np.ndarray:
-    """
-    Calculates the Jacobian matrix of a vector-valued function (R^n -> R^m) at a given point.
-    The resulting matrix has dimensions (m, n).
-    """
-    v_x_arr = np.asarray(v_x, dtype=float)
-    return np.column_stack([partial_derivative_saap(v_f, v_x_arr, idx, h) for idx in range(len(v_x_arr))])
+    return float(sum(partial_derivative_saap(v_f, v_x_arr, idx, h)[idx] for idx in range(len(v_x_arr))))
