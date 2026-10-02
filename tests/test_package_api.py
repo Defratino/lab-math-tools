@@ -3,12 +3,12 @@ import lab_math_tools as lmt
 
 def test_package_exports():
     expected_exports = [
-        "derivative_saap",
-        "partial_derivative_saap",
-        "v_gradient_saap",
-        "divergence_saap",
-        "propagate_uncertainty_saap",
-        "relative_uncertainty_saap",
+        "derivative",
+        "partial_derivative",
+        "v_gradient",
+        "divergence",
+        "propagate_uncertainty",
+        "relative_uncertainty",
         "plot_measurements",
         "turn_list_of_vectors_to_matrix",
         "add_zoom_inset",

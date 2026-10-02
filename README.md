@@ -68,13 +68,13 @@ import lab_math_tools as lmt
 
 ```python
 # 1D Derivative: d/dx (x^2) at x = 2.0 -> 4.0
-df = lmt.derivative_saap(lambda x: x**2, x=2.0)
+df = lmt.derivative(lambda x: x**2, x=2.0)
 
 # Vector-valued function derivative: d/dx [x^2, x^3] at x = 2.0 -> [4.0, 12.0]
-v_df = lmt.derivative_saap(lambda x: np.array([x**2, x**3]), x=2.0)
+v_df = lmt.derivative(lambda x: np.array([x**2, x**3]), x=2.0)
 
 # Gradient: nabla(x^2 * y) at [2.0, 3.0] -> [12.0, 4.0]
-grad = lmt.v_gradient_saap(lambda v: v[0]**2 * v[1], v_x=np.array([2.0, 3.0]))
+grad = lmt.v_gradient(lambda v: v[0]**2 * v[1], v_x=np.array([2.0, 3.0]))
 ```
 
 ### 3. Error Propagation
@@ -85,10 +85,10 @@ vals = np.array([10.0, 5.0])
 errs = np.array([0.5, 0.2])
 
 # Statistical (RSS): sqrt((5 * 0.5)^2 + (10 * 0.2)^2) = sqrt(10.25)
-delta_f = lmt.propagate_uncertainty_saap(lambda v: v[0] * v[1], vals, errs, method="statistical")
+delta_f = lmt.propagate_uncertainty(lambda v: v[0] * v[1], vals, errs, method="statistical")
 
 # Relative uncertainty: |Δf / f|
-rel_err = lmt.relative_uncertainty_saap(lambda v: v[0] * v[1], vals, errs)
+rel_err = lmt.relative_uncertainty(lambda v: v[0] * v[1], vals, errs)
 ```
 
 ### 4. 2D Data Graphing & Zoom Insets
@@ -159,4 +159,4 @@ Function names indicate their mathematical mapping domains:
 4. If the functional argument is a scalar-valued function, the argument name will be `s_f`.
 
 ### Abbreviations & Terminology
-* **saap:** Simple Approximation At Point (e.g., `derivative_saap` == Simple Approximation At Point derivative)
+* **saap:** Simple Approximation At Point (e.g., `derivative` == Simple Approximation At Point derivative)

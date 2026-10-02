@@ -40,4 +40,4 @@ Functions as Inputs (Callbacks)
         the argument name will be `s_f`.
 
 Abbreviations & Terminology
-    - saap: Simple Approximation At Point (e.g., `derivative_saap` == Simple Approximation At Point derivative)
+    - saap: Simple Approximation At Point (e.g., `derivative` == Simple Approximation At Point derivative)

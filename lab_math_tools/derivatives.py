@@ -21,7 +21,7 @@ from typing import Any, Callable
 import numpy as np
 
 
-def derivative_saap(
+def derivative(
     f: Callable[[float], float | np.ndarray],
     x: float,
     h: float = 1e-5,
@@ -35,7 +35,7 @@ def derivative_saap(
     return (f(x + h) - f(x - h)) / (2 * h)
 
 
-def partial_derivative_saap(
+def partial_derivative(
     f: Callable[[np.ndarray], float | np.ndarray],
     v_x: np.ndarray,
     idx: int = 0,
@@ -60,7 +60,7 @@ def partial_derivative_saap(
     return (f(v_x_plus_h) - f(v_x_minus_h)) / (2 * h)
 
 
-def v_gradient_saap(
+def v_gradient(
     s_f: Callable[[np.ndarray], float],
     v_x: np.ndarray,
     h: float = 1e-5,
@@ -69,10 +69,10 @@ def v_gradient_saap(
     Calculates the gradient of a scalar function (R^n -> R) at a given point.
     """
     v_x_arr = np.asarray(v_x, dtype=float)
-    return np.array([partial_derivative_saap(s_f, v_x_arr, idx, h) for idx in range(len(v_x_arr))])
+    return np.array([partial_derivative(s_f, v_x_arr, idx, h) for idx in range(len(v_x_arr))])
 
 
-def divergence_saap(
+def divergence(
     v_f: Callable[[np.ndarray], np.ndarray],
     v_x: np.ndarray,
     h: float = 1e-5,
@@ -85,4 +85,4 @@ def divergence_saap(
     if out.shape != v_x_arr.shape:
         raise ValueError("The function must return a vector of the same dimension as the input.")
 
-    return float(sum(partial_derivative_saap(v_f, v_x_arr, idx, h)[idx] for idx in range(len(v_x_arr))))
+    return float(sum(partial_derivative(v_f, v_x_arr, idx, h)[idx] for idx in range(len(v_x_arr))))

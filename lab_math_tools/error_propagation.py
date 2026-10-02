@@ -19,10 +19,10 @@ from __future__ import annotations
 from typing import Callable
 
 import numpy as np
-from lab_math_tools.derivatives import derivative_saap, v_gradient_saap
+from lab_math_tools.derivatives import derivative, v_gradient
 
 
-def propagate_uncertainty_saap(
+def propagate_uncertainty(
     f: Callable[..., float],
     x: float | np.ndarray,
     dx: float | np.ndarray,
@@ -62,7 +62,7 @@ def propagate_uncertainty_saap(
 
     # 1. Handle pure scalar mapping (R -> R)
     if np.isscalar(x) and np.isscalar(dx):
-        sensitivity = derivative_saap(f, float(x), h)
+        sensitivity = derivative(f, float(x), h)
         return float(np.abs(sensitivity * dx))
 
     # Guard against scalar-vector mismatch
@@ -74,13 +74,13 @@ def propagate_uncertainty_saap(
     dx_arr = np.asarray(dx, dtype=float)
 
     if x_arr.ndim == 0 and dx_arr.ndim == 0:
-        sensitivity = derivative_saap(f, float(x_arr), h)
+        sensitivity = derivative(f, float(x_arr), h)
         return float(np.abs(sensitivity * dx_arr))
 
     if x_arr.shape != dx_arr.shape:
         raise ValueError("Value and uncertainty vectors must have the same dimension.")
 
-    v_sensitivities = v_gradient_saap(f, x_arr, h)
+    v_sensitivities = v_gradient(f, x_arr, h)
     v_terms = v_sensitivities * dx_arr
 
     if method == "statistical":
@@ -91,7 +91,7 @@ def propagate_uncertainty_saap(
         raise ValueError("Method must be 'statistical' or 'absolute'.")
 
 
-def relative_uncertainty_saap(
+def relative_uncertainty(
     f: Callable[..., float],
     x: float | np.ndarray,
     dx: float | np.ndarray,
@@ -114,7 +114,7 @@ def relative_uncertainty_saap(
     Mathematical Formulation:
     * Relative Error = |Δf / f(x)|
     """
-    absolute_uncertainty = propagate_uncertainty_saap(f, x, dx, method, h)
+    absolute_uncertainty = propagate_uncertainty(f, x, dx, method, h)
     nominal_value = float(np.abs(f(x)))
 
     if nominal_value == 0:
