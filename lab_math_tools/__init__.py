@@ -22,8 +22,6 @@ from lab_math_tools.curve_fitting import (
     fit_custom,
     fit_linear,
     fit_metrics,
-    fit_polynomial,
-    fit_preset,
 )
 from lab_math_tools.graphing import (
     add_zoom_inset,
@@ -60,7 +58,5 @@ __all__ = [
     "FitResult",
     "fit_metrics",
     "fit_linear",
-    "fit_polynomial",
-    "fit_preset",
     "fit_custom",
 ]

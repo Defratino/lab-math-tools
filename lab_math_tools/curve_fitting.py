@@ -1,9 +1,8 @@
-﻿"""
+"""
 Curve Fitting Module
 
 Provides tools for fitting mathematical models to experimental data.
-Supports linear regression, polynomial fitting, preset model fitting,
-and custom user-defined function fitting.
+Supports linear regression and custom user-defined function fitting.
 
 Conventions followed:
 - `v_`  : Abstract vector (numpy.ndarray with dynamic dimensions)
@@ -15,6 +14,8 @@ Conventions followed:
 from __future__ import annotations
 
 from dataclasses import dataclass
+import inspect
+import re
 from typing import Callable
 
 import numpy as np
@@ -32,11 +33,8 @@ class FitResult:
 
     Attributes:
     * v_params (np.ndarray): Best-fit parameter values.
-        - fit_linear:    [intercept, slope]
-        - fit_polynomial: [a0, a1, ..., a_degree] ascending power order;
-          pinned coefficients are exactly 0.0.
-        - fit_preset:    model-dependent (see fit_preset docstring).
-        - fit_custom:    only the FREE parameters that were fitted.
+        - fit_linear: [intercept, slope]
+        - fit_custom: fitted parameter values [p0, p1, ...]
     * m_covariance (np.ndarray): Estimated covariance matrix of v_params.
     * v_residuals (np.ndarray): Residuals (v_y - v_y_predicted) at each point.
     * metrics (dict[str, float]): Goodness-of-fit metrics.
@@ -219,286 +217,105 @@ def fit_linear(v_x: np.ndarray, v_y: np.ndarray) -> FitResult:
 
 
 # =============================================================================
-# fit_polynomial
-# =============================================================================
-
-def fit_polynomial(
-    v_x: np.ndarray,
-    v_y: np.ndarray,
-    degree: int,
-    zero_degrees: list[int] | None = None,
-) -> FitResult:
-    """
-    Fits a polynomial y = a0 + a1*x + ... + a_n*x^n using least squares.
-
-    Parameters:
-    * v_x (np.ndarray): 1-D array of independent variable values.
-    * v_y (np.ndarray): 1-D array of observed dependent variable values.
-    * degree (int): Polynomial degree n. The full coefficient vector has
-        length degree+1 in ascending power order [a0, a1, ..., a_degree].
-    * zero_degrees (list[int] | None): Power indices to pin to exactly 0.
-        For example, zero_degrees=[0, 2] on a degree-3 fit produces
-        f(x) = a1*x + a3*x^3. Equivalent to bias=False when zero_degrees=[0].
-        Raises ValueError for any index outside [0, degree].
-
-    Returns:
-    * FitResult:
-        - v_params:     1-D float array of length degree+1. Pinned entries are 0.
-        - m_covariance: (n_free, n_free) covariance for the FREE parameters only.
-        - model_name:   "poly_{degree}" or "poly_{degree}_zero{zero_degrees}"
-    """
-    v_x_arr, v_y_arr = _validate_1d_xy(v_x, v_y)
-
-    if zero_degrees is not None:
-        bad = [d for d in zero_degrees if d < 0 or d > degree]
-        if bad:
-            raise ValueError(
-                f"zero_degrees contains indices {bad} outside the valid "
-                f"range [0, {degree}]."
-            )
-
-    all_powers = list(range(degree + 1))
-    zero_set = set(zero_degrees) if zero_degrees else set()
-    free_powers = [p for p in all_powers if p not in zero_set]
-
-    # Design matrix for free powers only
-    m_X_free = np.column_stack([v_x_arr**p for p in free_powers])
-
-    # Least squares on the reduced system
-    v_free_params, _, _, _ = np.linalg.lstsq(m_X_free, v_y_arr, rcond=None)
-
-    # Reconstruct full coefficient vector (zeros at pinned positions)
-    v_params = np.zeros(degree + 1)
-    for i, p in enumerate(free_powers):
-        v_params[p] = v_free_params[i]
-
-    # Predictions using the full polynomial
-    m_X_full = np.column_stack([v_x_arr**p for p in all_powers])
-    v_y_pred = m_X_full @ v_params
-    v_residuals = v_y_arr - v_y_pred
-
-    n = len(v_x_arr)
-    n_free = len(free_powers)
-    sigma2 = float(np.sum(v_residuals**2) / max(n - n_free, 1))
-    m_covariance = sigma2 * np.linalg.pinv(m_X_free.T @ m_X_free)
-
-    metrics = fit_metrics(v_y_arr, v_y_pred, n_params=n_free)
-
-    suffix = f"_zero{zero_degrees}" if zero_degrees else ""
-    return FitResult(
-        v_params=v_params,
-        m_covariance=m_covariance,
-        v_residuals=v_residuals,
-        metrics=metrics,
-        model_name=f"poly_{degree}{suffix}",
-    )
-
-
-# =============================================================================
-# Preset model functions
-# =============================================================================
-
-def _model_sine(x: np.ndarray, A: float, omega: float, phi: float, C: float) -> np.ndarray:
-    return A * np.sin(omega * x + phi) + C
-
-
-def _model_sine_no_bias(x: np.ndarray, A: float, omega: float, phi: float) -> np.ndarray:
-    return A * np.sin(omega * x + phi)
-
-
-def _model_exponential(x: np.ndarray, A: float, b: float, C: float) -> np.ndarray:
-    return A * np.exp(b * x) + C
-
-
-def _model_exponential_no_bias(x: np.ndarray, A: float, b: float) -> np.ndarray:
-    return A * np.exp(b * x)
-
-
-def _model_logarithm(x: np.ndarray, A: float, b: float, C: float) -> np.ndarray:
-    return A * np.log(b * x) + C
-
-
-def _model_logarithm_no_bias(x: np.ndarray, A: float, b: float) -> np.ndarray:
-    return A * np.log(b * x)
-
-
-def _model_power(x: np.ndarray, A: float, b: float) -> np.ndarray:
-    return A * x**b
-
-
-def _model_gaussian(x: np.ndarray, A: float, mu: float, sigma: float) -> np.ndarray:
-    return A * np.exp(-((x - mu)**2) / (2.0 * sigma**2))
-
-
-# Preset registry: maps model name -> biased model, unbiased model, default p0 pairs
-_PRESET_INFO: dict[str, dict] = {
-    "sine": {
-        "model": _model_sine,
-        "model_no_bias": _model_sine_no_bias,
-        "p0": [1.0, 1.0, 0.0, 0.0],
-        "p0_no_bias": [1.0, 1.0, 0.0],
-    },
-    "exponential": {
-        "model": _model_exponential,
-        "model_no_bias": _model_exponential_no_bias,
-        "p0": [1.0, 1.0, 0.0],
-        "p0_no_bias": [1.0, 1.0],
-    },
-    "logarithm": {
-        "model": _model_logarithm,
-        "model_no_bias": _model_logarithm_no_bias,
-        "p0": [1.0, 1.0, 0.0],
-        "p0_no_bias": [1.0, 1.0],
-    },
-    "power": {
-        # Power law A*x^b has no additive C; bias flag is ignored.
-        "model": _model_power,
-        "model_no_bias": _model_power,
-        "p0": [1.0, 1.0],
-        "p0_no_bias": [1.0, 1.0],
-    },
-    "gaussian": {
-        # Gaussian A*exp(...) has no additive C; bias flag is ignored.
-        "model": _model_gaussian,
-        "model_no_bias": _model_gaussian,
-        "p0": [1.0, 0.0, 1.0],
-        "p0_no_bias": [1.0, 0.0, 1.0],
-    },
-}
-
-
-# =============================================================================
-# fit_preset
-# =============================================================================
-
-def fit_preset(
-    v_x: np.ndarray,
-    v_y: np.ndarray,
-    model: str,
-    bias: bool = True,
-    v_p0: np.ndarray | None = None,
-    bounds: tuple = (-np.inf, np.inf),
-) -> FitResult:
-    """
-    Fits data to a pre-defined model using non-linear least squares
-    (scipy.optimize.curve_fit).
-
-    Parameters:
-    * v_x (np.ndarray): 1-D array of independent variable values.
-    * v_y (np.ndarray): 1-D array of observed dependent variable values.
-    * model (str): Preset model identifier. One of:
-        - "sine"        : A*sin(w*x + phi) + C,  v_params=[A, w, phi, C]
-        - "exponential" : A*exp(b*x) + C,        v_params=[A, b, C]
-        - "logarithm"   : A*ln(b*x) + C,         v_params=[A, b, C]
-        - "power"       : A*x^b,                 v_params=[A, b]
-        - "gaussian"    : A*exp(-(x-u)^2/2s^2),  v_params=[A, u, s]
-    * bias (bool): If True (default), includes additive constant C in the
-        model. If False, C is fixed to zero and excluded from v_params.
-        Note: "power" and "gaussian" have no additive C; bias is ignored.
-    * v_p0 (np.ndarray | None): Initial parameter guesses. Must match the
-        number of free parameters for the chosen model/bias combination.
-        Default guesses are used when None.
-    * bounds: Parameter bounds forwarded to scipy.optimize.curve_fit.
-
-    Returns:
-    * FitResult:
-        - model_name: "{model}" or "{model}_no_bias"
-    """
-    v_x_arr, v_y_arr = _validate_1d_xy(v_x, v_y)
-
-    if model not in _PRESET_INFO:
-        raise ValueError(
-            f"Unknown model '{model}'. "
-            f"Available models: {list(_PRESET_INFO.keys())}"
-        )
-
-    info = _PRESET_INFO[model]
-    model_func = info["model"] if bias else info["model_no_bias"]
-    default_p0 = info["p0"] if bias else info["p0_no_bias"]
-    p0 = np.asarray(v_p0, dtype=float) if v_p0 is not None else np.array(default_p0)
-
-    v_params, m_covariance = curve_fit(
-        model_func, v_x_arr, v_y_arr, p0=p0, bounds=bounds, maxfev=10_000,
-    )
-
-    v_y_pred = model_func(v_x_arr, *v_params)
-    v_residuals = v_y_arr - v_y_pred
-    metrics = fit_metrics(v_y_arr, v_y_pred, n_params=len(v_params))
-
-    name_suffix = "" if bias else "_no_bias"
-    return FitResult(
-        v_params=v_params,
-        m_covariance=m_covariance,
-        v_residuals=v_residuals,
-        metrics=metrics,
-        model_name=f"{model}{name_suffix}",
-    )
-
-
-# =============================================================================
 # fit_custom
 # =============================================================================
+
+def _infer_n_params(s_f: Callable[..., float], x_sample: float = 1.0) -> int:
+    """
+    Infers the number of free parameters for a model function s_f(v_x).
+
+    Checks in order:
+    1. Parameter name prefix (e.g., v3_x implies dimension 3 -> 2 free parameters).
+    2. Probing evaluation with vectors of dimension 2, 3, ... until one succeeds.
+    """
+    sig = inspect.signature(s_f)
+    params = list(sig.parameters.values())
+    if len(params) == 1:
+        param_name = params[0].name
+        match = re.match(r"^v(\d+)", param_name)
+        if match:
+            dim = int(match.group(1))
+            if dim >= 2:
+                return dim - 1
+            raise ValueError(
+                f"Parameter name '{param_name}' indicates dimension {dim}, "
+                "which does not have at least one free parameter besides x (v[0])."
+            )
+
+    # Probing evaluation for abstract vectors v_ or lambdas
+    for k in range(1, 31):
+        for val in (0.0, 1.0, 0.5):
+            test_vec = np.full(k + 1, val, dtype=float)
+            test_vec[0] = x_sample
+            try:
+                s_f(test_vec)
+                return k
+            except (IndexError, ValueError):
+                break
+            except Exception:
+                continue
+
+    raise ValueError(
+        "Could not automatically infer the number of free parameters for s_f. "
+        "Please provide v_p0 explicitly."
+    )
+
 
 def fit_custom(
     v_x: np.ndarray,
     v_y: np.ndarray,
-    f: Callable[[np.ndarray], float],
-    v_p0: np.ndarray,
-    v_fixed_params: np.ndarray | None = None,
+    s_f: Callable[[np.ndarray], float] | None = None,
+    v_p0: np.ndarray | None = None,
     bounds: tuple = (-np.inf, np.inf),
+    *,
+    f: Callable[[np.ndarray], float] | None = None,
 ) -> FitResult:
     """
     Fits data to a user-defined function following the project naming conventions.
 
     The user-supplied function must follow the scalar-valued mapping convention:
-        f(v_x) -> float    (R^n -> R)
+        s_f(v_x) -> float    (R^n -> R)
 
-    Within f, the input vector is assembled per sample as:
-        v_x[0]                       -> x data for this sample
-        v_x[1 : 1 + n_fixed]         -> v_fixed_params (pre-set constants)
-        v_x[1 + n_fixed : ...]       -> free parameters (varied by optimizer)
-
-    Example
-    -------
-    Fitting the amplitude of a sine wave with frequency pre-fixed to 2.0:
-
-        def s_f(v3_x: np.ndarray) -> float:
-            # v3_x[0]=x_data, v3_x[1]=fixed_freq=2.0, v3_x[2]=amplitude (free)
-            return v3_x[2] * np.sin(v3_x[1] * v3_x[0])
-
-        result = fit_custom(v_x, v_y, s_f,
-                            v_p0=np.array([1.0]),
-                            v_fixed_params=np.array([2.0]))
+    Within s_f, the input vector is assembled per sample as:
+        v_x[0] -> x data for this sample
+        v_x[1 : ...] -> free parameters (varied by optimizer)
 
     Parameters:
-    * v_x (np.ndarray): 1-D array of x data values (one per sample).
-    * v_y (np.ndarray): 1-D array of observed y values.
-    * f (callable): User function f(v_x) -> float per the convention above.
-    * v_p0 (np.ndarray): Initial guess for the FREE parameters only.
-    * v_fixed_params (np.ndarray | None): Constant values placed at positions
-        [1 : 1 + n_fixed] in the assembled vector. None means no fixed params.
-    * bounds: Bounds for the free parameters, forwarded to curve_fit.
+    * v_x (np.ndarray): 1-D array of independent variable values.
+    * v_y (np.ndarray): 1-D array of observed dependent variable values.
+    * s_f (Callable): Scalar-valued function callback (R^n -> R).
+    * v_p0 (np.ndarray | None): Initial parameter guesses for the free parameters.
+        If None, automatically defaults to an array of zeros.
+    * bounds (tuple): Lower and upper bounds on parameters, forwarded to
+      `scipy.optimize.curve_fit`.
+    * f (Callable | None): Keyword-only alias for s_f.
 
     Returns:
     * FitResult:
-        - v_params:     FREE (fitted) parameters only.
-        - m_covariance: (n_free, n_free) covariance for the free parameters.
+        - v_params:     Fitted parameter values.
+        - m_covariance: Covariance matrix of the fitted parameters.
+        - v_residuals:  Residuals at each point.
+        - metrics:      Goodness-of-fit metrics.
         - model_name:   "custom"
     """
+    func = s_f if s_f is not None else f
+    if func is None:
+        raise ValueError("A model function s_f must be provided.")
+
     v_x_arr, v_y_arr = _validate_1d_xy(v_x, v_y)
-    v_p0_arr = np.asarray(v_p0, dtype=float)
-    v_fixed = (
-        np.asarray(v_fixed_params, dtype=float)
-        if v_fixed_params is not None
-        else np.array([], dtype=float)
-    )
+
+    if v_p0 is None:
+        n_params = _infer_n_params(func, x_sample=float(v_x_arr[0]))
+        v_p0_arr = np.zeros(n_params, dtype=float)
+    else:
+        v_p0_arr = np.asarray(v_p0, dtype=float)
 
     def _wrapper(v_x_data: np.ndarray, *free_params: float) -> np.ndarray:
         v_free = np.array(free_params, dtype=float)
         return np.array([
-            f(np.concatenate(([xi], v_fixed, v_free)))
+            func(np.concatenate(([xi], v_free)))
             for xi in v_x_data
-        ])
+        ], dtype=float)
 
     v_free_params, m_covariance = curve_fit(
         _wrapper, v_x_arr, v_y_arr, p0=v_p0_arr, bounds=bounds, maxfev=10_000,
