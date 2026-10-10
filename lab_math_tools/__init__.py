@@ -14,6 +14,12 @@ from lab_math_tools.error_propagation import (
     propagate_uncertainty,
     relative_uncertainty,
 )
+from lab_math_tools.curve_fitting import (
+    FitResult,
+    fit_custom,
+    fit_linear,
+    fit_metrics,
+)
 from lab_math_tools.graphing import (
     add_zoom_inset,
     plot_measurements,
@@ -35,4 +41,9 @@ __all__ = [
     "plot_measurements",
     "turn_list_of_vectors_to_matrix",
     "add_zoom_inset",
+    # Curve Fitting
+    "FitResult",
+    "fit_metrics",
+    "fit_linear",
+    "fit_custom",
 ]
