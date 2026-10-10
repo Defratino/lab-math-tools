@@ -26,6 +26,12 @@ from lab_math_tools.graphing import (
     plot_with_errors,
     turn_list_of_vectors_to_matrix,
 )
+from lab_math_tools.pipelines import (
+    CustomPipelineResult,
+    LinearPipelineResult,
+    custom_fit_pipeline,
+    linear_fit_pipeline,
+)
 
 __version__ = "0.1.0"
 
@@ -48,4 +54,9 @@ __all__ = [
     "fit_metrics",
     "fit_linear",
     "fit_custom",
+    # Pipelines
+    "linear_fit_pipeline",
+    "custom_fit_pipeline",
+    "LinearPipelineResult",
+    "CustomPipelineResult",
 ]
