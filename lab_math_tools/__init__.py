@@ -23,6 +23,7 @@ from lab_math_tools.curve_fitting import (
 from lab_math_tools.graphing import (
     add_zoom_inset,
     plot_measurements,
+    plot_with_errors,
     turn_list_of_vectors_to_matrix,
 )
 
@@ -39,6 +40,7 @@ __all__ = [
     "relative_uncertainty",
     # Graphing
     "plot_measurements",
+    "plot_with_errors",
     "turn_list_of_vectors_to_matrix",
     "add_zoom_inset",
     # Curve Fitting

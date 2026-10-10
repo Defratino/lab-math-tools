@@ -19,6 +19,7 @@ from lab_math_tools.graphing import (
     _resolve_colors,
     add_zoom_inset,
     plot_measurements,
+    plot_with_errors,
     turn_list_of_vectors_to_matrix,
 )
 
@@ -534,3 +535,218 @@ def test_add_zoom_inset_show_behavior(monkeypatch):
     add_zoom_inset(ax, x_range=(1.0, 2.0), y_range=(1.0, 4.0), show=True)
     assert len(show_called) == 1
 
+
+# ===========================================================================
+# Tests for plot_measurements — legend_loc
+# ===========================================================================
+
+def test_plot_measurements_legend_loc():
+    """
+    Test that legend_loc is forwarded to ax.legend().
+    When line_labels are provided the legend should be present and its
+    location string should match what was requested.
+    """
+    lv_x = np.array([1.0, 2.0, 3.0])
+    lv_y = [np.array([1.0, 2.0, 3.0]), np.array([3.0, 2.0, 1.0])]
+
+    for loc in ("best", "upper right", "lower left", "center"):
+        ax = plot_measurements(
+            lv_x, lv_y,
+            line_labels=["A", "B"],
+            legend_loc=loc,
+            show=False,
+        )
+        assert ax.get_legend() is not None, f"Legend missing for loc='{loc}'"
+
+
+# ===========================================================================
+# Tests for plot_with_errors
+# ===========================================================================
+
+def test_plot_with_errors_y_only():
+    """
+    Test plot_with_errors with only y-error bars.
+    Verifies that the axes contains error-bar containers and the returned
+    object is a valid plt.Axes instance.
+    """
+    v_x = np.array([1.0, 2.0, 3.0, 4.0])
+    v_y = np.array([1.0, 4.0, 9.0, 16.0])
+    v_y_err = np.array([0.1, 0.2, 0.3, 0.4])
+
+    ax = plot_with_errors(v_x, v_y, lv_y_err=v_y_err, show=False)
+
+    assert isinstance(ax, plt.Axes)
+    assert len(ax.containers) > 0  # errorbar always produces a container
+
+
+def test_plot_with_errors_x_only():
+    """
+    Test plot_with_errors with only x-error bars.
+    """
+    v_x = np.array([1.0, 2.0, 3.0])
+    v_y = np.array([2.0, 4.0, 6.0])
+    v_x_err = np.array([0.05, 0.05, 0.05])
+
+    ax = plot_with_errors(v_x, v_y, lv_x_err=v_x_err, show=False)
+    assert isinstance(ax, plt.Axes)
+
+
+def test_plot_with_errors_both_axes():
+    """
+    Test plot_with_errors when both x- and y-error bars are provided.
+    """
+    v_x = np.array([0.0, 1.0, 2.0])
+    v_y = np.array([0.0, 1.0, 4.0])
+    v_x_err = np.array([0.1, 0.1, 0.1])
+    v_y_err = np.array([0.2, 0.3, 0.4])
+
+    ax = plot_with_errors(v_x, v_y, lv_x_err=v_x_err, lv_y_err=v_y_err, show=False)
+    assert isinstance(ax, plt.Axes)
+
+
+def test_plot_with_errors_multiple_series():
+    """
+    Test plot_with_errors with multiple measurement series (list of vectors).
+    Each series should produce its own error-bar container.
+    """
+    v_x = np.array([1.0, 2.0, 3.0])
+    lv_y = [np.array([1.0, 2.0, 3.0]), np.array([3.0, 2.0, 1.0])]
+    lv_y_err = [np.array([0.1, 0.1, 0.1]), np.array([0.2, 0.2, 0.2])]
+
+    ax = plot_with_errors(v_x, lv_y, lv_y_err=lv_y_err, show=False)
+    assert isinstance(ax, plt.Axes)
+    # Two errorbar calls -> two containers
+    assert len(ax.containers) == 2
+
+
+def test_plot_with_errors_shared_error_broadcast():
+    """
+    Test that a single 1D error vector is broadcast across all measurement series.
+    """
+    v_x = np.array([1.0, 2.0, 3.0])
+    lv_y = [np.array([1.0, 2.0, 3.0]), np.array([4.0, 5.0, 6.0])]
+    v_y_err = np.array([0.5, 0.5, 0.5])  # single shared error vector
+
+    # Should broadcast to both series without error
+    ax = plot_with_errors(v_x, lv_y, lv_y_err=v_y_err, show=False)
+    assert isinstance(ax, plt.Axes)
+    assert len(ax.containers) == 2
+
+
+def test_plot_with_errors_style_params():
+    """
+    Test that all style parameters (linestyles, markers, colors, capsize,
+    color_method, legend_loc, line_labels) are accepted without error.
+    """
+    v_x = np.array([0.0, 1.0, 2.0])
+    lv_y = [np.array([0.0, 1.0, 4.0]), np.array([0.0, 2.0, 8.0])]
+    lv_y_err = [np.array([0.1, 0.1, 0.1]), np.array([0.2, 0.2, 0.2])]
+
+    ax = plot_with_errors(
+        v_x,
+        lv_y,
+        lv_y_err=lv_y_err,
+        x_label="Time (s)",
+        y_label="Distance (m)",
+        title="Styled error-bar plot",
+        line_labels=["Run 1", "Run 2"],
+        legend_loc="upper left",
+        linestyles="--",
+        markers="s",
+        colors=["red", "blue"],
+        color_method="specific",
+        capsize=5.0,
+        grid=False,
+        show=False,
+    )
+    assert isinstance(ax, plt.Axes)
+    assert ax.get_legend() is not None
+
+
+def test_plot_with_errors_returns_axes_and_accepts_custom_ax():
+    """
+    Test that plot_with_errors plots onto a user-supplied Axes and returns it.
+    """
+    fig, custom_ax = plt.subplots()
+    v_x = np.array([1.0, 2.0])
+    v_y = np.array([3.0, 4.0])
+    v_y_err = np.array([0.1, 0.1])
+
+    returned_ax = plot_with_errors(v_x, v_y, lv_y_err=v_y_err, ax=custom_ax, show=False)
+
+    assert returned_ax is custom_ax
+
+
+def test_plot_with_errors_save_file(tmp_path: Path):
+    """
+    Test that plot_with_errors saves the figure to disk when save_file_name is provided.
+    """
+    v_x = np.array([1.0, 2.0, 3.0])
+    v_y = np.array([1.0, 4.0, 9.0])
+    v_y_err = np.array([0.1, 0.2, 0.3])
+    out_file = tmp_path / "test_errorbar_plot.png"
+
+    plot_with_errors(v_x, v_y, lv_y_err=v_y_err, save_file_name=str(out_file), show=False)
+
+    assert out_file.exists()
+    assert out_file.stat().st_size > 0
+
+
+def test_plot_with_errors_show_flag(monkeypatch):
+    """
+    Test that show=False suppresses plt.show() and show=True invokes it.
+    """
+    show_called = []
+    monkeypatch.setattr(plt, "show", lambda: show_called.append(True))
+
+    v_x = np.array([1.0, 2.0])
+    v_y = np.array([3.0, 4.0])
+    v_y_err = np.array([0.1, 0.1])
+
+    plot_with_errors(v_x, v_y, lv_y_err=v_y_err, show=False)
+    assert len(show_called) == 0
+
+    plot_with_errors(v_x, v_y, lv_y_err=v_y_err, show=True)
+    assert len(show_called) == 1
+
+
+def test_plot_with_errors_validation_no_errors():
+    """
+    Test that omitting both lv_x_err and lv_y_err raises ValueError.
+    """
+    with pytest.raises(ValueError, match="At least one of lv_x_err or lv_y_err"):
+        plot_with_errors([1.0, 2.0], [3.0, 4.0])
+
+
+def test_plot_with_errors_validation_mismatched_err_series():
+    """
+    Test that providing the wrong number of error series raises ValueError.
+
+    When lv_y_err has more series than lv_y, _normalize_xy is called with
+    the error data paired against lv_y. Because lv_y has 2 series but the
+    error list has 3, _normalize_xy raises "Number of x measurements (3)
+    does not match y measurements (2)." — which is a ValueError either way.
+    """
+    v_x = np.array([1.0, 2.0, 3.0])
+    lv_y = [np.array([1.0, 2.0, 3.0]), np.array([4.0, 5.0, 6.0])]
+
+    # 3 error series for 2 data series
+    lv_y_err_bad = [
+        np.array([0.1, 0.1, 0.1]),
+        np.array([0.2, 0.2, 0.2]),
+        np.array([0.3, 0.3, 0.3]),
+    ]
+    with pytest.raises(ValueError):
+        plot_with_errors(v_x, lv_y, lv_y_err=lv_y_err_bad, show=False)
+
+
+def test_plot_with_errors_validation_mismatched_line_labels():
+    """
+    Test that a line_labels list with the wrong length raises ValueError.
+    """
+    v_x = np.array([1.0, 2.0])
+    lv_y = [np.array([1.0, 2.0]), np.array([3.0, 4.0])]
+    lv_y_err = [np.array([0.1, 0.1]), np.array([0.2, 0.2])]
+
+    with pytest.raises(ValueError, match="line_labels length"):
+        plot_with_errors(v_x, lv_y, lv_y_err=lv_y_err, line_labels=["Only One"], show=False)

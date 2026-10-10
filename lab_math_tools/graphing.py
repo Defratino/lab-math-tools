@@ -50,6 +50,7 @@ def plot_measurements(
     y_label: str = "Y",
     title: str = "",
     line_labels: list[str] | None = None,
+    legend_loc: str = "best",
     grid: bool = True,
     linestyles: str | list[str] | None = None,
     markers: str | list[str] | None = None,
@@ -80,6 +81,9 @@ def plot_measurements(
     * y_label (str): Label for the y-axis. Default is "Y".
     * title (str): Title of the graph.
     * line_labels (list[str] | None): Labels for each measurement line in the legend.
+    * legend_loc (str): Location string for the legend, forwarded to Matplotlib's
+        ``ax.legend(loc=...)``. Common values: "best", "upper right", "upper left",
+        "lower right", "lower left", "center". Default is "best".
     * grid (bool): Whether to display a grid. Default is True.
     * linestyles (str | list[str] | None): Style(s) of the lines (e.g. '-', '--').
     * markers (str | list[str] | None): Marker style(s) for data points (e.g. '.', 'o').
@@ -184,7 +188,7 @@ def plot_measurements(
     if title:
         ax.set_title(title)
     if line_labels is not None:
-        ax.legend()
+        ax.legend(loc=legend_loc)
     if grid:
         ax.grid(True)
     if save_file_name:
@@ -399,8 +403,14 @@ def add_zoom_inset(
         Default is "upper_right".
     * zoom_labels (bool): Whether to show tick labels on the inset axes. Default is False.
     * indicator_settings (dict[str, Any] | None): Style settings for the zoom indicator
-        box and connector lines. Supported keys: 'edgecolor', 'linewidth', 'linestyle', 'alpha'.
-        Default is None (uses standard defaults: black, width 1.0, solid line, alpha 1.0).
+        box and connector lines. Supported keys:
+        - 'edgecolor' (str): Color of the zoom rectangle outline and connector lines.
+          Use any Matplotlib color string, e.g. "red", "#FF8800". Default: "black".
+        - 'linewidth' (float): Width of the box outline and connectors. Default: 1.0.
+        - 'linestyle' (str): Line style for connectors (e.g. "-", "--"). Default: "-".
+        - 'alpha' (float): Opacity of the indicator elements, 0.0–1.0. Default: 1.0.
+        Pass a partial dictionary to override only specific keys; unspecified keys
+        retain their defaults. E.g. ``indicator_settings={"edgecolor": "red"}``.
     * show (bool, keyword-only): Whether to call plt.show(). Default is True.
 
     Returns:
@@ -502,6 +512,12 @@ def add_zoom_inset(
     # connector.xy1 is the zoom rectangle corner in parent data coordinates.
     inset_indicator = ax.indicate_inset_zoom(ax_inset, **resolved_indicator)
 
+    # Sync the inset box border (spines) to the same edgecolor as the
+    # zoom rectangle and connectors. Without this, the spines always render
+    # in their default black regardless of the user's indicator_settings.
+    for spine in ax_inset.spines.values():
+        spine.set_edgecolor(resolved_indicator["edgecolor"])
+
     ix0, iy0, iw, ih = inset_bounds_tuple
     ix1, iy1 = ix0 + iw, iy0 + ih
     data_to_axes = ax.transData + ax.transAxes.inverted()
@@ -532,8 +548,197 @@ def add_zoom_inset(
     return ax_inset
 
 
+# =============================================================================
+# plot_with_errors
+# =============================================================================
+
+def plot_with_errors(
+    lv_x: Any,
+    lv_y: Any,
+    lv_x_err: Any = None,
+    lv_y_err: Any = None,
+    x_label: str = "X",
+    y_label: str = "Y",
+    title: str = "",
+    line_labels: list[str] | None = None,
+    legend_loc: str = "best",
+    grid: bool = True,
+    linestyles: str | list[str] | None = None,
+    markers: str | list[str] | None = None,
+    colors: str | list[str] | None = None,
+    color_method: str = "gradient",
+    capsize: float = 3.0,
+    save_file_name: str = "",
+    ax: plt.Axes | None = None,
+    show: bool = True,
+) -> plt.Axes:
+    """
+    Plot multiple measurements with symmetric error bars on a 2D graph.
+
+    This is the error-bar counterpart of ``plot_measurements()``. It accepts the
+    same data formats for x/y and shares the same color, style, and label options,
+    while additionally accepting per-axis uncertainty arrays.
+
+    At least one of ``lv_x_err`` or ``lv_y_err`` must be provided. Both are
+    optional, so callers can supply only x-errors, only y-errors, or both.
+
+    Parameters:
+    * lv_x (Sequence | np.ndarray): X-values of the measurements. Same formats as
+        ``plot_measurements`` (single 1D vector, list of vectors, or 2D matrix).
+    * lv_y (Sequence | np.ndarray): Y-values of the measurements.
+    * lv_x_err (Sequence | np.ndarray | None): Symmetric x-uncertainties (±Δx).
+        Accepts the same shapes as lv_x / lv_y. When a single 1D vector is given
+        it is broadcast to all measurements. Pass None to omit x-error bars.
+    * lv_y_err (Sequence | np.ndarray | None): Symmetric y-uncertainties (±Δy).
+        Same rules as lv_x_err. Pass None to omit y-error bars.
+    * x_label (str): Label for the x-axis. Default is "X".
+    * y_label (str): Label for the y-axis. Default is "Y".
+    * title (str): Title of the graph.
+    * line_labels (list[str] | None): Labels for each measurement series in the legend.
+    * legend_loc (str): Location string for the legend, forwarded to
+        ``ax.legend(loc=...)``. Default is "best".
+    * grid (bool): Whether to display a grid. Default is True.
+    * linestyles (str | list[str] | None): Line style(s) for the connecting line
+        between error-bar markers (e.g. '-', '--', 'none' to suppress).
+    * markers (str | list[str] | None): Marker style(s) for data points (e.g. '.', 'o').
+    * colors (str | list[str] | None): Colors of the lines / error bars, or a
+        colormap name. Follows the same rules as in ``plot_measurements``.
+    * color_method (str): "gradient" | "specific" | "colormap". Default is "gradient".
+    * capsize (float): Length (in points) of the error-bar end caps. Default is 3.0.
+    * save_file_name (str): If provided, saves the figure to this file path.
+    * ax (plt.Axes | None): Axes object to plot on. If None, a new figure is created.
+    * show (bool): Whether to call plt.show() at the end. Default is True.
+
+    Returns:
+    * plt.Axes: The Matplotlib Axes object containing the plot.
+    """
+    if lv_x_err is None and lv_y_err is None:
+        raise ValueError(
+            "At least one of lv_x_err or lv_y_err must be provided. "
+            "Use plot_measurements() if no error bars are needed."
+        )
+
+    # Create figure and axes if not provided
+    if ax is None:
+        _, ax = plt.subplots()
+
+    # Normalize x/y data to paired lists of 1D arrays
+    lv_x_norm, lv_y_norm = _normalize_xy(lv_x, lv_y)
+    n_measurements = len(lv_y_norm)
+
+    if n_measurements == 0:
+        return ax
+
+    # Normalize error inputs (reuse the same helper; errors must be non-negative
+    # but we validate shape, not sign, to avoid blocking one-sided workflows)
+    lv_x_err_norm: list[np.ndarray | None]
+    lv_y_err_norm: list[np.ndarray | None]
+
+    if lv_x_err is not None:
+        lv_xe_raw, _ = _normalize_xy(lv_x_err, lv_y)  # pair with y just for shape info
+        # If a single shared error vector was supplied, broadcast it
+        if len(lv_xe_raw) == 1 and n_measurements > 1:
+            lv_x_err_norm = [lv_xe_raw[0]] * n_measurements
+        elif len(lv_xe_raw) != n_measurements:
+            raise ValueError(
+                f"lv_x_err contains {len(lv_xe_raw)} series but lv_y has {n_measurements}."
+            )
+        else:
+            lv_x_err_norm = lv_xe_raw
+    else:
+        lv_x_err_norm = [None] * n_measurements
+
+    if lv_y_err is not None:
+        lv_ye_raw, _ = _normalize_xy(lv_y_err, lv_y)
+        if len(lv_ye_raw) == 1 and n_measurements > 1:
+            lv_y_err_norm = [lv_ye_raw[0]] * n_measurements
+        elif len(lv_ye_raw) != n_measurements:
+            raise ValueError(
+                f"lv_y_err contains {len(lv_ye_raw)} series but lv_y has {n_measurements}."
+            )
+        else:
+            lv_y_err_norm = lv_ye_raw
+    else:
+        lv_y_err_norm = [None] * n_measurements
+
+    # Normalize linestyles
+    if linestyles is None:
+        linestyles = ["-"] * n_measurements
+    elif isinstance(linestyles, str):
+        linestyles = [linestyles] * n_measurements
+    elif isinstance(linestyles, list):
+        if len(linestyles) == 1:
+            linestyles = [linestyles[0]] * n_measurements
+        elif len(linestyles) != n_measurements:
+            raise ValueError(
+                f"linestyles list length ({len(linestyles)}) must match the "
+                f"number of measurements ({n_measurements})."
+            )
+    else:
+        raise TypeError("linestyles must be a string or a list of strings.")
+
+    # Normalize markers
+    if markers is None:
+        markers = ["o"] * n_measurements
+    elif isinstance(markers, str):
+        markers = [markers] * n_measurements
+    elif isinstance(markers, list):
+        if len(markers) == 1:
+            markers = [markers[0]] * n_measurements
+        elif len(markers) != n_measurements:
+            raise ValueError(
+                f"markers list length ({len(markers)}) must match the "
+                f"number of measurements ({n_measurements})."
+            )
+    else:
+        raise TypeError("markers must be a string or a list of strings.")
+
+    # Validate line_labels
+    if line_labels is not None:
+        if len(line_labels) != n_measurements:
+            raise ValueError(
+                f"line_labels length ({len(line_labels)}) must match the "
+                f"number of measurements ({n_measurements})."
+            )
+
+    # Resolve colors
+    resolved_colors = _resolve_colors(n_measurements, colors, color_method)
+
+    # Plotting loop
+    for i in range(n_measurements):
+        label = line_labels[i] if line_labels is not None else None
+        ax.errorbar(
+            lv_x_norm[i],
+            lv_y_norm[i],
+            xerr=lv_x_err_norm[i],
+            yerr=lv_y_err_norm[i],
+            linestyle=linestyles[i],
+            marker=markers[i],
+            color=resolved_colors[i],
+            capsize=capsize,
+            label=label,
+        )
+
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    if title:
+        ax.set_title(title)
+    if line_labels is not None:
+        ax.legend(loc=legend_loc)
+    if grid:
+        ax.grid(True)
+    if save_file_name:
+        ax.figure.savefig(save_file_name)
+
+    if show:
+        plt.show()
+
+    return ax
+
+
 __all__ = [
     "plot_measurements",
+    "plot_with_errors",
     "turn_list_of_vectors_to_matrix",
     "add_zoom_inset",
 ]
